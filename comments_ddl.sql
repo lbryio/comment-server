@@ -1,0 +1,34 @@
+-- ATTACH DATABASE 'comments.db' AS Comments;
+
+PRAGMA FOREIGN_KEYS = ON;
+
+
+DROP TABLE IF EXISTS CHANNEL;
+CREATE TABLE IF NOT EXISTS CHANNEL(
+    ClaimId     TEXT    NOT NULL,
+    Name        TEXT    NOT NULL,
+    Timestamp   INTEGER      DEFAULT NULL,
+    CONSTRAINT CHANNEL_PK PRIMARY KEY (ClaimId)
+        ON CONFLICT IGNORE,
+    CONSTRAINT CHANNEL_NAME_LEN
+        CHECK ( 0 < length(Name) AND length(Name) <= 120)
+);
+
+
+
+
+
+DROP TABLE IF EXISTS COMMENT;
+CREATE TABLE IF NOT EXISTS COMMENT (
+    CommentId   INTEGER NOT NULL,
+    LbryClaimId TEXT    NOT NULL,
+    ChannelId   TEXT    NOT NULL,
+    Body        TEXT    NOT NULL,
+    ParentId    INTEGER          DEFAULT NULL,
+    Timestamp   DATETIME,
+    CONSTRAINT COMMENT_ID_PK PRIMARY KEY (CommentId)
+        ON CONFLICT ABORT,
+    CONSTRAINT COMMENT_PARENT_FK FOREIGN KEY (ParentId) REFERENCES COMMENT(CommentId)
+        ON UPDATE CASCADE ON DELETE NO ACTION,  -- setting null implies comment is top level
+    CONSTRAINT COMMENT_BODY_LEN CHECK(1 < length(Body) AND length(Body) <= 2000)
+);
