@@ -1,10 +1,18 @@
 import typing
-import random
 import asyncio
 from aiohttp import web
 
+import database as db
 
-class FakedCommentServer:
+
+ERRORS = {
+    'INVALID_PARAMS': {'code': -32602, 'message': 'Invalid parameters'},
+    'INTERNAL': {'code': -32603, 'message': 'An internal error'},
+    'UNKNOWN': {'code': -1, 'message': 'An unknown or very miscellaneous error'},
+}
+
+
+class CommentServer:
     def __init__(self, port=2903):
         self.port = port
         self.app = web.Application(debug=True)
@@ -12,42 +20,11 @@ class FakedCommentServer:
         self.runner = None
         self.server = None
 
-    def get_claim_comments(self, uri: str, better_keys: bool) -> typing.Union[dict, list, None]:
-        return [self.get_comment(i) for i in range(75)]
-
-    def get_comment(self, comment_id: int, parent_id: int = None) -> dict:
-        return {
-            'comment_id': comment_id,
-            'parent_id': parent_id,
-            'author': f'Person{comment_id}',
-            'message': f'comment {comment_id}',
-            'claim_id': random.randint(1, 2**16),
-            'time_posted': random.randint(2**16, 2**32 - 1),
-            'upvotes': random.randint(0, 9999), 'downvotes': random.randint(0, 9999)
-        }
-
-    def comment(self, uri: str, poster: str, message: str) -> typing.Union[int, dict, None]:
-        if not uri.startswith('lbry://'):
-            return {'error': self.ERRORS['INVALID_URI']}
-        return random.randint(1, 9999)
-
-    def reply(self, parent_id: int, poster: str, message: str) -> dict:
-        if 2 <= len(message) <= 2000 and 2 <= len(poster) <= 127 and parent_id > 0:
-            return random.randint(parent_id + 1, 2**32 - 1)
-        return {'error': self.ERRORS['INVALID_PARAMS']}
-
-    def get_comment_data(self, comm_index: int, better_keys: bool = False) -> typing.Union[dict, None]:
-        return self.get_comment(comm_index)
-
-    def get_comment_replies(self, comm_index: int) -> typing.Union[list, None]:
-        return [random.randint(comm_index, comm_index+250) for _ in range(75)]
-
     methods = {
-        'get_claim_comments': get_claim_comments,
-        'get_comment_data': get_comment_data,
-        'get_comment_replies': get_comment_replies,
-        'comment': comment,
-        'reply': reply
+        'get_claim_comments': db.get_claim_comments,
+        'get_comment_ids': db.get_comment_ids,
+        'get_comment_data': db.get_comment_data,
+        'create_comment': db.create_comment,
     }
 
     def process_json(self, body) -> dict:
@@ -60,7 +37,7 @@ class FakedCommentServer:
             else:
                 response['result'] = result
         else:
-            response['error'] = self.ERRORS['UNKNOWN']
+            response['error'] = ERRORS['UNKNOWN']
         return response
 
     async def _start(self):
@@ -90,9 +67,9 @@ class FakedCommentServer:
                 response = self.process_json(body)
             return web.json_response(response)
         else:
-            return web.json_response({'error': self.ERRORS['UNKNOWN']})
+            return web.json_response({'error': ERRORS['UNKNOWN']})
 
 
 if __name__ == '__main__':
-    app = FakedCommentServer()
+    app = CommentServer()
     asyncio.run(app.run())
