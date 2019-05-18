@@ -23,7 +23,7 @@ class CommentServer:
     methods = {
         'get_claim_comments': db.get_claim_comments,
         'get_comment_ids': db.get_comment_ids,
-        'get_comment_data': db.get_comment_data,
+        'get_comments_by_id': db.get_comments_by_id,
         'create_comment': db.create_comment,
     }
 
