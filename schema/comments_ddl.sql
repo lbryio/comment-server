@@ -38,7 +38,7 @@ CREATE INDEX COMMENT_CLAIM_INDEX ON COMMENT (LbryClaimId);
 -- VIEWS
 DROP VIEW IF EXISTS COMMENTS_ON_CLAIMS;
 CREATE VIEW COMMENTS_ON_CLAIMS (comment_id, claim_id, timestamp, channel_name, channel_id, channel_uri, comment, parent_id) AS
-    SELECT C.CommentId, C.LbryClaimId, C.Timestamp, CHAN.Name, CHAN.ClaimId, 'lbry://' || '@' || CHAN.Name || '#' || CHAN.ClaimId, C.Body, C.ParentId
+    SELECT C.CommentId, C.LbryClaimId, C.Timestamp, CHAN.Name, CHAN.ClaimId, 'lbry://' || CHAN.Name || '#' || CHAN.ClaimId, C.Body, C.ParentId
     FROM CHANNEL AS CHAN
     INNER JOIN COMMENT C on CHAN.ClaimId = C.ChannelId
     ORDER BY C.Timestamp;

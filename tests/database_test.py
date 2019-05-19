@@ -36,7 +36,7 @@ class TestCommentCreation(unittest.TestCase):
         comment = self.db.create_comment(
             claim_id=self.claimId,
             comment='This is a named comment',
-            channel_name='username',
+            channel_name='@username',
             channel_id='529357c3422c6046d3fec76be2358004ba22abcd',
         )
         self.assertIsNotNone(comment)
@@ -48,7 +48,7 @@ class TestCommentCreation(unittest.TestCase):
         reply = self.db.create_comment(
             claim_id=self.claimId,
             comment='This is a named response',
-            channel_name='another_username',
+            channel_name='@another_username',
             channel_id='529357c3422c6046d3fec76be2358004ba224bcd',
             parent_id=previous_id
         )
@@ -86,7 +86,7 @@ class TestCommentCreation(unittest.TestCase):
         comment = self.db.create_comment(
             claim_id=self.claimId,
             comment='I like big butts and i cannot lie',
-            channel_name='sirmixalot',
+            channel_name='@sirmixalot',
             channel_id='529357c3422c6046d3fec76be2358005ba22abcd',
             sig='siggy'
         )
@@ -99,7 +99,7 @@ class TestCommentCreation(unittest.TestCase):
         reply = self.db.create_comment(
             claim_id=self.claimId,
             comment='This is a LBRY verified response',
-            channel_name='LBRY',
+            channel_name='@LBRY',
             channel_id='529357c3422c6046d3fec76be2358001ba224bcd',
             parent_id=previous_id,
             sig='Cursive Font Goes Here'
@@ -110,4 +110,46 @@ class TestCommentCreation(unittest.TestCase):
         self.assertIn('parent_id', reply)
         self.assertEqual(reply['parent_id'], comment['comment_id'])
         self.assertEqual(reply['claim_id'], comment['claim_id'])
+
+    def testInvalidUsername(self):
+        self.assertRaises(
+            AssertionError,
+            self.db.create_comment,
+            claim_id=self.claimId,
+            channel_name='$#(@#$@#$',
+            channel_id='529357c3422c6046d3fec76be2358001ba224b23',
+            comment='this is an invalid username'
+        )
+        comment = self.db.create_comment(
+            claim_id=self.claimId,
+            channel_name='@' + 'a'*255,
+            channel_id='529357c3422c6046d3fec76be2358001ba224b23',
+            comment='this is a valid username'
+        )
+        self.assertIsNotNone(comment)
+        self.assertRaises(
+            AssertionError,
+            self.db.create_comment,
+            claim_id=self.claimId,
+            channel_name='@' + 'a'*256,
+            channel_id='529357c3422c6046d3fec76be2358001ba224b23',
+            comment='this username is too long'
+        )
+        comment = self.db.create_comment(
+            claim_id=self.claimId,
+            channel_name='',
+            channel_id='529357c3422c6046d3fec76be2358001ba224b23',
+            comment='this username will default to anonymous'
+        )
+        self.assertIsNotNone(comment)
+        self.assertEqual(comment['channel_name'], server.conf.anonymous['channel_name'])
+        self.assertEqual(comment['channel_id'], server.conf.anonymous['channel_id'])
+        self.assertRaises(
+            AssertionError,
+            self.db.create_comment,
+            claim_id=self.claimId,
+            channel_name='@',
+            channel_id='529357c3422c6046d3fec76be2358001ba224b23',
+            comment='this username is too short'
+        )
 

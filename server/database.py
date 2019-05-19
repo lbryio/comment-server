@@ -91,13 +91,25 @@ class DatabaseConnection:
             )
         return comment_id
 
-    def create_comment(self, channel_name: str = None, channel_id: str = None, **kwargs) -> dict:
+    def create_comment(self, comment: str, claim_id: str, channel_name: str = None,
+                       channel_id: str = None, **kwargs) -> dict:
+
         if channel_id and channel_name:
+            validate_input(
+                comment=comment,
+                claim_id=claim_id,
+                channel_id=channel_id,
+                channel_name=channel_name,
+            )
             self._insert_channel(channel_name, channel_id)
         else:
-            channel_name, channel_id = anonymous['channel_name'], anonymous['channel_id']
-        validate_input(channel_id=channel_id, channel_name=channel_name, **kwargs)
-        comcast_id = self._insert_comment(channel_id=channel_id, **kwargs)
+            channel_id=anonymous['channel_id']
+        comcast_id = self._insert_comment(
+            comment=comment,
+            claim_id=claim_id,
+            channel_id=channel_id,
+            **kwargs
+        )
         curry = self.connection.execute(
             'SELECT * FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?', (comcast_id,)
         )
