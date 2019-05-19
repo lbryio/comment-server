@@ -1,16 +1,28 @@
 import unittest
+
+from faker.providers import internet
+from faker.providers import lorem
+from faker.providers import misc
+
 import server.conf
 import server.database as db
 import sqlite3
 import json
+import faker
+from random import randint
+
+fake = faker.Faker()
+fake.add_provider(internet)
+fake.add_provider(lorem)
+fake.add_provider(misc)
 
 
-class TestCommentCreation(unittest.TestCase):
+class DatabaseTestCase(unittest.TestCase):
     def setUp(self) -> None:
+        super().setUp()
         self.db = db.DatabaseConnection('test.db')
         self.db.obtain_connection()
         self.db.generate_schema(server.conf.schema_dir)
-        self.claimId = '529357c3422c6046d3fec76be2358004ba22e340'
 
     def tearDown(self) -> None:
         curs = self.db.connection.execute('SELECT * FROM COMMENT')
@@ -21,16 +33,22 @@ class TestCommentCreation(unittest.TestCase):
         results['COMMENTS_ON_CLAIMS'] = [dict(r) for r in curs.fetchall()]
         curs = self.db.connection.execute('SELECT * FROM COMMENT_REPLIES')
         results['COMMENT_REPLIES'] = [dict(r) for r in curs.fetchall()]
-        print(json.dumps(results, indent=4))
+        # print(json.dumps(results, indent=4))
         conn: sqlite3.Connection = self.db.connection
-        conn.executescript("""
-            DROP TABLE IF EXISTS COMMENT;
-            DROP TABLE IF EXISTS CHANNEL;
-            DROP VIEW IF EXISTS COMMENTS_ON_CLAIMS;
-            DROP VIEW IF EXISTS COMMENT_REPLIES;
-        """)
-        conn.commit()
+        with conn:
+            conn.executescript("""
+                DROP TABLE IF EXISTS COMMENT;
+                DROP TABLE IF EXISTS CHANNEL;
+                DROP VIEW IF EXISTS COMMENTS_ON_CLAIMS;
+                DROP VIEW IF EXISTS COMMENT_REPLIES;
+            """)
         conn.close()
+
+
+class TestCommentCreation(DatabaseTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.claimId = '529357c3422c6046d3fec76be2358004ba22e340'
 
     def testNamedComments(self):
         comment = self.db.create_comment(
@@ -153,3 +171,57 @@ class TestCommentCreation(unittest.TestCase):
             comment='this username is too short'
         )
 
+
+class PopulatedDatabaseTest(DatabaseTestCase):
+
+    def testInsertComments(self):
+        success, total = 0, 0
+        top_comments = generate_top_comments()
+        for _, comments in top_comments.items():
+            for i, comment in enumerate(comments):
+                result = self.db.create_comment(**comment)
+                if result:
+                    success += 1
+                del comment
+                comments[i] = result
+
+            total += len(comments)
+        self.assertLessEqual(success, total)
+        self.assertGreater(success, 0)
+        success = 0
+        for reply in generate_replies(top_comments):
+            reply_id = self.db.create_comment(**reply)
+            if reply_id:
+                success += 1
+        self.assertGreater(success, 0)
+        self.assertLess(success, total)
+
+
+def generate_replies(top_comments):
+    return [{
+        'claim_id': comment['claim_id'],
+        'parent_id': comment['comment_id'],
+        'comment': ' '.join(fake.text(max_nb_chars=randint(50, 2500))),
+        'channel_name': '@' + fake.user_name(),
+        'channel_id': fake.sha1() if hash(comment['comment_id']) % 11 == 0 else None,
+        'signature': fake.uuid4() if hash(comment['comment_id']) % 11 == 0 else None
+    }
+        for claim, comments in top_comments.items()
+        for i, comment in enumerate(comments)
+        if comment
+    ]
+
+
+def generate_top_comments():
+    claim_ids = [fake.sha1() for _ in range(15)]
+    top_comments = {
+        cid: [{
+            'claim_id': cid,
+            'comment': ''.join(fake.text(max_nb_chars=randint(50, 2500))),
+            'channel_name': '@' + fake.user_name() if (hash(cid) * i) % 29*i > 0 else None,
+            'channel_id': fake.sha1() if (hash(cid) * i) % 29*i > 0 else None,
+            'signature': fake.uuid4() if (hash(cid) * i) % 29*i > 0 > hash(cid) else None
+        } for i in range(randint(0, hash(cid) % 91))]
+        for cid in claim_ids
+    }
+    return top_comments

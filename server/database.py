@@ -93,28 +93,35 @@ class DatabaseConnection:
 
     def create_comment(self, comment: str, claim_id: str, channel_name: str = None,
                        channel_id: str = None, **kwargs) -> dict:
-
-        if channel_id and channel_name:
+        thing = None
+        try:
             validate_input(
                 comment=comment,
                 claim_id=claim_id,
                 channel_id=channel_id,
                 channel_name=channel_name,
             )
-            self._insert_channel(channel_name, channel_id)
-        else:
-            channel_id=anonymous['channel_id']
-        comcast_id = self._insert_comment(
-            comment=comment,
-            claim_id=claim_id,
-            channel_id=channel_id,
-            **kwargs
-        )
-        curry = self.connection.execute(
-            'SELECT * FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?', (comcast_id,)
-        )
-        thing = curry.fetchone()
-        return dict(thing) if thing else None
+            if channel_id and channel_name:
+                self._insert_channel(channel_name, channel_id)
+            else:
+                channel_id = anonymous['channel_id']
+            comcast_id = self._insert_comment(
+                comment=comment,
+                claim_id=claim_id,
+                channel_id=channel_id,
+                **kwargs
+            )
+            curry = self.connection.execute(
+                'SELECT * FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?', (comcast_id,)
+            )
+            thing = curry.fetchone()
+        except AssertionError as e:
+            print(e)
+        finally:
+            return dict(thing) if thing else None
+
+
+
 
     def get_comment_ids(self, claim_id: str, parent_id: str = None, page=1, page_size=50):
         """ Just return a list of the comment IDs that are associated with the given claim_id.
