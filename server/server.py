@@ -1,9 +1,7 @@
-import typing
 import asyncio
 from aiohttp import web
 
-import database as db
-
+import server.database as db
 
 ERRORS = {
     'INVALID_PARAMS': {'code': -32602, 'message': 'Invalid parameters'},
