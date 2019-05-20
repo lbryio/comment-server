@@ -3,27 +3,15 @@ import typing
 import re
 import nacl.hash
 import time
-from lbry_comment_server.conf import *
+from lbry_comment_server import anonymous, database_fp
 
 
 def obtain_connection(filepath: str = None, row_factory: bool = True):
-    filepath = filepath if filepath else database_dir
+    filepath = filepath if filepath else database_fp
     connection = sqlite3.connect(filepath)
     if row_factory:
         connection.row_factory = sqlite3.Row
     return connection
-
-
-def generate_schema(conn: sqlite3.Connection, filepath: str = None):
-    filepath = filepath if filepath else schema_dir
-    with open(filepath, 'r') as ddl_file:
-        conn.executescript(ddl_file.read())
-
-
-def create_backup(conn: sqlite3.Connection, filepath: str = None):
-    filepath = filepath if filepath else backup_dir
-    with sqlite3.connect(filepath) as back:
-        conn.backup(back)
 
 
 def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str = None,

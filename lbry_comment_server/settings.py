@@ -8,8 +8,8 @@ config_path = root_dir / 'config' / 'conf.json'
 def get_config(filepath):
     with open(filepath, 'r') as cfile:
         conf = json.load(cfile)
-    for key, path in conf['files'].items():
-        conf['files'][key] = str(root_dir / path)
+    for key, path in conf['path'].items():
+        conf['path'][key] = str(root_dir / path)
     return conf
 
 

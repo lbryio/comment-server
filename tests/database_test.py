@@ -4,7 +4,8 @@ from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
 
-import lbry_comment_server.conf as conf
+import schema.db_helpers as schema
+from lbry_comment_server.settings import config
 import lbry_comment_server.database as db
 import faker
 from random import randint
@@ -18,8 +19,8 @@ fake.add_provider(misc)
 class DatabaseTestCase(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.conn = db.obtain_connection('test.db')
-        db.generate_schema(self.conn, conf.schema_dir)
+        schema.setup_database(config['path']['test'])
+        self.conn = db.obtain_connection(config['path']['test'])
 
     def tearDown(self) -> None:
         curs = self.conn.execute('SELECT * FROM COMMENT')

@@ -4,7 +4,7 @@ import json
 from aiohttp import web
 
 from settings import config
-from lbry_comment_server import database_dir
+from lbry_comment_server import database_fp
 from lbry_comment_server.database import obtain_connection
 
 ERRORS = {
