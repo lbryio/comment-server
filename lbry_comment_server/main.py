@@ -7,11 +7,6 @@ from settings import config
 from lbry_comment_server import database_fp
 from lbry_comment_server.database import obtain_connection
 
-ERRORS = {
-    'INVALID_PARAMS': {'code': -32602, 'message': 'Invalid parameters'},
-    'INTERNAL': {'code': -32603, 'message': 'An internal error'},
-    'UNKNOWN': {'code': -1, 'message': 'An unknown or very miscellaneous error'},
-}
 
 
 class CommentServer:
