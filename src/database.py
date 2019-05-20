@@ -3,7 +3,7 @@ import typing
 import re
 import nacl.hash
 import time
-from server.conf import *
+from src.conf import *
 
 
 def validate_input(**kwargs):

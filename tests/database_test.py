@@ -4,8 +4,8 @@ from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
 
-import server.conf
-import server.database as db
+import src.conf
+import src.database as db
 import sqlite3
 import faker
 from random import randint
@@ -21,7 +21,7 @@ class DatabaseTestCase(unittest.TestCase):
         super().setUp()
         self.db = db.DatabaseConnection('test.db')
         self.db.obtain_connection()
-        self.db.generate_schema(server.conf.schema_dir)
+        self.db.generate_schema(src.conf.schema_dir)
 
     def tearDown(self) -> None:
         curs = self.db.connection.execute('SELECT * FROM COMMENT')

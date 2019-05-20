@@ -1,8 +1,10 @@
 import asyncio
+import json
+
 from aiohttp import web
 
-from server.database import DatabaseConnection
-from server.conf import database_dir
+from src import database_dir
+from src.database import DatabaseConnection
 
 ERRORS = {
     'INVALID_PARAMS': {'code': -32602, 'message': 'Invalid parameters'},
@@ -20,7 +22,7 @@ class CommentServer:
         self.server = None
         self.db_conn = DatabaseConnection(database_dir)
 
-    def ping(cls):
+    def ping(self):
         return 'pong'
 
     methods = {
@@ -29,10 +31,6 @@ class CommentServer:
         'get_comment_ids': None,
         'get_comments_by_id': None,
         'create_comment': None
-    }
-
-    __methods = {
-        'ping'
     }
 
     __db_methods = {
@@ -47,11 +45,15 @@ class CommentServer:
         if body['method'] in self.methods:
             method = body['method']
             params = body.get('params', {})
-            if method in self.__db_methods:
-                result = self.db_conn.__getattribute__(method).__call__(**params)
-            else:
-                result = self.__methods[method](self, **params)
-            response['result'] = result
+            try:
+                if method in self.__db_methods:
+                    result = self.db_conn.__getattribute__(method).__call__(**params)
+                else:
+                    result = self.methods[method](self, **params)
+                response['result'] = result
+            except TypeError as te:
+                print(te)
+                response['error'] = ERRORS['INVALID_PARAMS']
         else:
             response['error'] = ERRORS['UNKNOWN']
         return response
@@ -77,15 +79,22 @@ class CommentServer:
             await self._stop()
 
     async def api(self, request):
-        body = await request.json()
-        if type(body) is list or type(body) is dict:
-            if type(body) is list:  # batch request
-                response = [self.process_json(part) for part in body]
-            else:  # single rpc request
-                response = self.process_json(body)
-            return web.json_response(response)
-        else:
-            return web.json_response({'error': ERRORS['UNKNOWN']})
+        try:
+            body = await request.json()
+            if type(body) is list or type(body) is dict:
+                if type(body) is list:  # batch request
+                    response = [self.process_json(part) for part in body]
+                else:  # single rpc request
+                    response = self.process_json(body)
+                return web.json_response(response)
+            else:
+                return web.json_response({'error': ERRORS['UNKNOWN']})
+        except
+        except json.decoder.JSONDecodeError as jde:
+            return web.json_response({
+                'error': {'message': jde.msg, 'code': -1}
+            })
+
 
 
 if __name__ == '__main__':
