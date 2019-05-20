@@ -89,12 +89,10 @@ class CommentServer:
                 return web.json_response(response)
             else:
                 return web.json_response({'error': ERRORS['UNKNOWN']})
-        except
         except json.decoder.JSONDecodeError as jde:
             return web.json_response({
                 'error': {'message': jde.msg, 'code': -1}
             })
-
 
 
 if __name__ == '__main__':

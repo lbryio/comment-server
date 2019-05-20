@@ -77,7 +77,7 @@ class DatabaseConnection:
             )
 
     def _insert_comment(self, claim_id: str = None, comment: str = None,
-                        channel_id: str = None, sig: str = None,
+                        channel_id: str = None, signature: str = None,
                         parent_id: str = None, **kwargs):
         timestamp = time.time_ns()
         comment_prehash = ':'.join((claim_id, comment, str(timestamp),))
@@ -90,7 +90,7 @@ class DatabaseConnection:
                                                 ParentId, Signature, Timestamp) 
                 VALUES (?, ?, ?, ?, ?, ?, ?) 
                 """,
-                (comment_id, claim_id, channel_id, comment, parent_id, sig, timestamp)
+                (comment_id, claim_id, channel_id, comment, parent_id, signature, timestamp)
             )
         return comment_id
 
