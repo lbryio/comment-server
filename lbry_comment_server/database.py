@@ -4,11 +4,11 @@ import typing
 import re
 import nacl.hash
 import time
-from lbry_comment_server import ANONYMOUS, DATABASE
+from lbry_comment_server.settings import config
 
 
 def obtain_connection(filepath: str = None, row_factory: bool = True):
-    filepath = filepath if filepath else DATABASE
+    filepath = filepath if filepath else config['PATH']['DATABASE']
     connection = sqlite3.connect(filepath)
     if row_factory:
         connection.row_factory = sqlite3.Row
@@ -64,8 +64,6 @@ def _insert_channel(conn: sqlite3.Connection, channel_name: str, channel_id: str
         )
 
 
-
-
 def _insert_comment(conn: sqlite3.Connection, claim_id: str = None, comment: str = None,
                     channel_id: str = None, signature: str = None, parent_id: str = None) -> str:
     timestamp = time.time_ns()
@@ -99,7 +97,7 @@ def create_comment(conn: sqlite3.Connection, comment: str, claim_id: str, **kwar
         except AssertionError:
             return None
     else:
-        channel_id = ANONYMOUS['channel_id']
+        channel_id = config['ANONYMOUS']['CHANNEL_ID']
     comment_id = _insert_comment(
         conn=conn, comment=comment, claim_id=claim_id, channel_id=channel_id, **kwargs
     )
@@ -169,7 +167,6 @@ async def _insert_comment_async(db_file: str, claim_id: str = None, comment: str
     return comment_id
 
 
-
 async def create_comment_async(db_file: str, comment: str, claim_id: str, **kwargs):
     channel_id = kwargs.pop('channel_id', '')
     channel_name = kwargs.pop('channel_name', '')
@@ -185,7 +182,7 @@ async def create_comment_async(db_file: str, comment: str, claim_id: str, **kwar
         except AssertionError:
             return None
     else:
-        channel_id = ANONYMOUS['channel_id']
+        channel_id = config['ANONYMOUS']['CHANNEL_ID']
     comment_id = await _insert_comment_async(
         db_file=db_file, comment=comment, claim_id=claim_id, channel_id=channel_id, **kwargs
     )

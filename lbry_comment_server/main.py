@@ -6,7 +6,11 @@ from aiohttp import web
 from settings import config
 from lbry_comment_server import DATABASE
 from lbry_comment_server.database import obtain_connection
+from lbry_comment_server import api_endpoint
 
+
+def add_routes(app: web.Application):
+    app.add_routes([web.post('/api', api_endpoint)])
 
 
 class CommentServer:

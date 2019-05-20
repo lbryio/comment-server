@@ -3,43 +3,15 @@ import unittest
 from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
-
-import schema.db_helpers as schema
-from lbry_comment_server.settings import config
 import lbry_comment_server.database as db
 import faker
 from random import randint
+
 
 fake = faker.Faker()
 fake.add_provider(internet)
 fake.add_provider(lorem)
 fake.add_provider(misc)
-
-
-class DatabaseTestCase(unittest.TestCase):
-    def setUp(self) -> None:
-        super().setUp()
-        schema.setup_database(config['path']['test'])
-        self.conn = db.obtain_connection(config['path']['test'])
-
-    def tearDown(self) -> None:
-        curs = self.conn.execute('SELECT * FROM COMMENT')
-        results = {'COMMENT': [dict(r) for r in curs.fetchall()]}
-        curs = self.conn.execute('SELECT * FROM CHANNEL')
-        results['CHANNEL'] = [dict(r) for r in curs.fetchall()]
-        curs = self.conn.execute('SELECT * FROM COMMENTS_ON_CLAIMS')
-        results['COMMENTS_ON_CLAIMS'] = [dict(r) for r in curs.fetchall()]
-        curs = self.conn.execute('SELECT * FROM COMMENT_REPLIES')
-        results['COMMENT_REPLIES'] = [dict(r) for r in curs.fetchall()]
-        # print(json.dumps(results, indent=4))
-        with self.conn:
-            self.conn.executescript("""
-                DROP TABLE IF EXISTS COMMENT;
-                DROP TABLE IF EXISTS CHANNEL;
-                DROP VIEW IF EXISTS COMMENTS_ON_CLAIMS;
-                DROP VIEW IF EXISTS COMMENT_REPLIES;
-            """)
-        self.conn.close()
 
 
 class TestCommentCreation(DatabaseTestCase):
@@ -257,6 +229,10 @@ class ListDatabaseTest(DatabaseTestCase):
                     matching_comments = db.get_comments_by_id(self.conn, comment_ids)
                     self.assertIsNotNone(matching_comments)
                     self.assertEqual(len(matching_comments), len(comment_ids))
+
+
+class AsyncDatabaseTestCase(unittest.TestCase):
+    async def asyncSetup
 
 
 def generate_replies(top_comments):

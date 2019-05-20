@@ -1,15 +1,15 @@
 {
-  "path": {
-    "schema": "schema/comments_ddl.sql",
-    "main": "database/comments.db",
-    "backup": "database/comments.backup.db",
-    "default": "database/default.db",
-    "test": "tests/test.db"
+  "PATH": {
+    "SCHEMA": "schema/comments_ddl.sql",
+    "MAIN": "database/comments.db",
+    "BACKUP": "database/comments.backup.db",
+    "DEFAULT": "database/default.db",
+    "TEST": "tests/test.db"
   },
-  "anonymous": {
-    "channel_id": "9cb713f01bf247a0e03170b5ed00d5161340c486",
-    "channel_name": "@Anonymous"
+  "ANONYMOUS": {
+    "CHANNEL_ID": "9cb713f01bf247a0e03170b5ed00d5161340c486",
+    "CHANNEL_NAME": "@Anonymous"
   },
-  "host": "localhost",
-  "port": "2903"
+  "HOST": "localhost",
+  "PORT": 2903
 }
