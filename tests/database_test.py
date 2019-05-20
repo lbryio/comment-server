@@ -4,9 +4,8 @@ from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
 
-import conf
+import lbry_comment_server.conf as conf
 import lbry_comment_server.database as db
-import sqlite3
 import faker
 from random import randint
 
@@ -19,29 +18,27 @@ fake.add_provider(misc)
 class DatabaseTestCase(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.db = db.DatabaseConnection('test.db')
-        self.db.obtain_connection()
-        self.db.generate_schema(src.conf.schema_dir)
+        self.conn = db.obtain_connection('test.db')
+        db.generate_schema(self.conn, conf.schema_dir)
 
     def tearDown(self) -> None:
-        curs = self.db.connection.execute('SELECT * FROM COMMENT')
+        curs = self.conn.execute('SELECT * FROM COMMENT')
         results = {'COMMENT': [dict(r) for r in curs.fetchall()]}
-        curs = self.db.connection.execute('SELECT * FROM CHANNEL')
+        curs = self.conn.execute('SELECT * FROM CHANNEL')
         results['CHANNEL'] = [dict(r) for r in curs.fetchall()]
-        curs = self.db.connection.execute('SELECT * FROM COMMENTS_ON_CLAIMS')
+        curs = self.conn.execute('SELECT * FROM COMMENTS_ON_CLAIMS')
         results['COMMENTS_ON_CLAIMS'] = [dict(r) for r in curs.fetchall()]
-        curs = self.db.connection.execute('SELECT * FROM COMMENT_REPLIES')
+        curs = self.conn.execute('SELECT * FROM COMMENT_REPLIES')
         results['COMMENT_REPLIES'] = [dict(r) for r in curs.fetchall()]
         # print(json.dumps(results, indent=4))
-        conn: sqlite3.Connection = self.db.connection
-        with conn:
-            conn.executescript("""
+        with self.conn:
+            self.conn.executescript("""
                 DROP TABLE IF EXISTS COMMENT;
                 DROP TABLE IF EXISTS CHANNEL;
                 DROP VIEW IF EXISTS COMMENTS_ON_CLAIMS;
                 DROP VIEW IF EXISTS COMMENT_REPLIES;
             """)
-        conn.close()
+        self.conn.close()
 
 
 class TestCommentCreation(DatabaseTestCase):
@@ -49,8 +46,9 @@ class TestCommentCreation(DatabaseTestCase):
         super().setUp()
         self.claimId = '529357c3422c6046d3fec76be2358004ba22e340'
 
-    def testNamedComments(self):
-        comment = self.db.create_comment(
+    def test01NamedComments(self):
+        comment = db.create_comment(
+            conn=self.conn,
             claim_id=self.claimId,
             comment='This is a named comment',
             channel_name='@username',
@@ -62,7 +60,8 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertIn('parent_id', comment)
         self.assertIsNone(comment['parent_id'])
         previous_id = comment['comment_id']
-        reply = self.db.create_comment(
+        reply = db.create_comment(
+            conn=self.conn,
             claim_id=self.claimId,
             comment='This is a named response',
             channel_name='@another_username',
@@ -76,8 +75,9 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertEqual(reply['parent_id'], comment['comment_id'])
         self.assertEqual(reply['claim_id'], comment['claim_id'])
 
-    def testAnonymousComments(self):
-        comment = self.db.create_comment(
+    def test02AnonymousComments(self):
+        comment = db.create_comment(
+            conn=self.conn,
             claim_id=self.claimId,
             comment='This is an anonymous comment'
         )
@@ -87,7 +87,8 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertIn('parent_id', comment)
         self.assertIsNone(comment['parent_id'])
         previous_id = comment['comment_id']
-        reply = self.db.create_comment(
+        reply = db.create_comment(
+            conn=self.conn,
             claim_id=self.claimId,
             comment='This is an unnamed response',
             parent_id=previous_id
@@ -99,13 +100,14 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertEqual(reply['parent_id'], comment['comment_id'])
         self.assertEqual(reply['claim_id'], comment['claim_id'])
 
-    def testSignedComments(self):
-        comment = self.db.create_comment(
+    def test03SignedComments(self):
+        comment = db.create_comment(
+            conn=self.conn,
             claim_id=self.claimId,
             comment='I like big butts and i cannot lie',
             channel_name='@sirmixalot',
             channel_id='529357c3422c6046d3fec76be2358005ba22abcd',
-            sig='siggy'
+            signature='siggy'
         )
         self.assertIsNotNone(comment)
         self.assertIn('comment', comment)
@@ -113,13 +115,14 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertIn('parent_id', comment)
         self.assertIsNone(comment['parent_id'])
         previous_id = comment['comment_id']
-        reply = self.db.create_comment(
+        reply = db.create_comment(
+            conn=self.conn,
             claim_id=self.claimId,
             comment='This is a LBRY verified response',
             channel_name='@LBRY',
             channel_id='529357c3422c6046d3fec76be2358001ba224bcd',
             parent_id=previous_id,
-            sig='Cursive Font Goes Here'
+            signature='Cursive Font Goes Here'
         )
         self.assertIsNotNone(reply)
         self.assertIn('comment', reply)
@@ -128,15 +131,17 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertEqual(reply['parent_id'], comment['comment_id'])
         self.assertEqual(reply['claim_id'], comment['claim_id'])
 
-    def testUsernameVariations(self):
-        invalid_comment = self.db.create_comment(
+    def test04UsernameVariations(self):
+        invalid_comment = db.create_comment(
+            conn=self.conn,
             claim_id=self.claimId,
             channel_name='$#(@#$@#$',
             channel_id='529357c3422c6046d3fec76be2358001ba224b23',
             comment='this is an invalid username'
         )
         self.assertIsNone(invalid_comment)
-        valid_username = self.db.create_comment(
+        valid_username = db.create_comment(
+            conn=self.conn,
             claim_id=self.claimId,
             channel_name='@' + 'a'*255,
             channel_id='529357c3422c6046d3fec76be2358001ba224b23',
@@ -144,21 +149,24 @@ class TestCommentCreation(DatabaseTestCase):
         )
         self.assertIsNotNone(valid_username)
 
-        lengthy_username = self.db.create_comment(
+        lengthy_username = db.create_comment(
+            conn=self.conn,
             claim_id=self.claimId,
             channel_name='@' + 'a'*256,
             channel_id='529357c3422c6046d3fec76be2358001ba224b23',
             comment='this username is too long'
         )
         self.assertIsNone(lengthy_username)
-        comment = self.db.create_comment(
+        comment = db.create_comment(
+            conn=self.conn,
             claim_id=self.claimId,
             channel_name='',
             channel_id='529357c3422c6046d3fec76be2358001ba224b23',
             comment='this username should not default to anonymous'
         )
         self.assertIsNone(comment)
-        short_username = self.db.create_comment(
+        short_username = db.create_comment(
+            conn=self.conn,
             claim_id=self.claimId,
             channel_name='@',
             channel_id='529357c3422c6046d3fec76be2358001ba224b23',
@@ -166,19 +174,14 @@ class TestCommentCreation(DatabaseTestCase):
         )
         self.assertIsNone(short_username)
 
-
-class PopulatedDatabaseTest(DatabaseTestCase):
-    def setUp(self) -> None:
-        super().setUp()
-
-    def test01InsertRandomComments(self):
+    def test05InsertRandomComments(self):
         top_comments, claim_ids = generate_top_comments_random()
         total = 0
         success = 0
         for _, comments in top_comments.items():
             for i, comment in enumerate(comments):
                 with self.subTest(comment=comment):
-                    result = self.db.create_comment(**comment)
+                    result = db.create_comment(self.conn, **comment)
                     if result:
                         success += 1
                     comments[i] = result
@@ -188,7 +191,7 @@ class PopulatedDatabaseTest(DatabaseTestCase):
         self.assertGreater(success, 0)
         success = 0
         for reply in generate_replies_random(top_comments):
-            reply_id = self.db.create_comment(**reply)
+            reply_id = db.create_comment(self.conn, **reply)
             if reply_id:
                 success += 1
         self.assertGreater(success, 0)
@@ -196,12 +199,12 @@ class PopulatedDatabaseTest(DatabaseTestCase):
         del top_comments
         del claim_ids
 
-    def test02GenerateAndListComments(self):
+    def test06GenerateAndListComments(self):
         top_comments, claim_ids = generate_top_comments()
         total, success = 0, 0
         for _, comments in top_comments.items():
             for i, comment in enumerate(comments):
-                result = self.db.create_comment(**comment)
+                result = db.create_comment(self.conn, **comment)
                 if result:
                     success += 1
                 comments[i] = result
@@ -211,15 +214,15 @@ class PopulatedDatabaseTest(DatabaseTestCase):
         self.assertGreater(total, 0)
         success, total = 0, 0
         for reply in generate_replies(top_comments):
-            self.db.create_comment(**reply)
+            db.create_comment(self.conn, **reply)
         self.assertEqual(success, total)
         for claim_id in claim_ids:
-            comments_ids = self.db.get_comment_ids(claim_id)
+            comments_ids = db.get_comment_ids(self.conn, claim_id)
             with self.subTest(comments_ids=comments_ids):
                 self.assertIs(type(comments_ids), list)
                 self.assertGreaterEqual(len(comments_ids), 0)
                 self.assertLessEqual(len(comments_ids), 50)
-                replies = self.db.get_comments_by_id(comments_ids)
+                replies = db.get_comments_by_id(self.conn, comments_ids)
                 self.assertLessEqual(len(replies), 50)
                 self.assertEqual(len(replies), len(comments_ids))
 
@@ -229,32 +232,30 @@ class ListDatabaseTest(DatabaseTestCase):
         super().setUp()
         top_coms, self.claim_ids = generate_top_comments(5, 75)
         self.top_comments = {
-            commie_id: [self.db.create_comment(**commie) for commie in commie_list]
+            commie_id: [db.create_comment(self.conn, **commie) for commie in commie_list]
             for commie_id, commie_list in top_coms.items()
         }
         self.replies = [
-            self.db.create_comment(**reply)
+            db.create_comment(self.conn, **reply)
             for reply in generate_replies(self.top_comments)
         ]
 
     def testLists(self):
         for claim_id in self.claim_ids:
             with self.subTest(claim_id=claim_id):
-                comments = self.db.get_claim_comments(claim_id)
+                comments = db.get_claim_comments(self.conn, claim_id)
                 self.assertIsNotNone(comments)
                 self.assertLessEqual(len(comments), 50)
-                top_comments = self.db.get_claim_comments(claim_id, top_level=True, page=1, page_size=50)
+                top_comments = db.get_claim_comments(self.conn, claim_id, top_level=True, page=1, page_size=50)
                 self.assertIsNotNone(top_comments)
                 self.assertLessEqual(len(top_comments), 50)
-                comment_ids = self.db.get_comment_ids(claim_id, page_size=50, page=1)
+                comment_ids = db.get_comment_ids(self.conn, claim_id, page_size=50, page=1)
                 with self.subTest(comment_ids=comment_ids):
                     self.assertIsNotNone(comment_ids)
                     self.assertLessEqual(len(comment_ids), 50)
-                    matching_comments = self.db.get_comments_by_id(comment_ids)
+                    matching_comments = db.get_comments_by_id(self.conn, comment_ids)
                     self.assertIsNotNone(matching_comments)
                     self.assertEqual(len(matching_comments), len(comment_ids))
-
-
 
 
 def generate_replies(top_comments):
