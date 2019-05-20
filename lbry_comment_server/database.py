@@ -1,13 +1,14 @@
 import sqlite3
+import aiosqlite
 import typing
 import re
 import nacl.hash
 import time
-from lbry_comment_server import anonymous, database_fp
+from lbry_comment_server import ANONYMOUS, DATABASE
 
 
 def obtain_connection(filepath: str = None, row_factory: bool = True):
-    filepath = filepath if filepath else database_fp
+    filepath = filepath if filepath else DATABASE
     connection = sqlite3.connect(filepath)
     if row_factory:
         connection.row_factory = sqlite3.Row
@@ -63,6 +64,8 @@ def _insert_channel(conn: sqlite3.Connection, channel_name: str, channel_id: str
         )
 
 
+
+
 def _insert_comment(conn: sqlite3.Connection, claim_id: str = None, comment: str = None,
                     channel_id: str = None, signature: str = None, parent_id: str = None) -> str:
     timestamp = time.time_ns()
@@ -96,7 +99,7 @@ def create_comment(conn: sqlite3.Connection, comment: str, claim_id: str, **kwar
         except AssertionError:
             return None
     else:
-        channel_id = anonymous['channel_id']
+        channel_id = ANONYMOUS['channel_id']
     comment_id = _insert_comment(
         conn=conn, comment=comment, claim_id=claim_id, channel_id=channel_id, **kwargs
     )
@@ -138,6 +141,62 @@ def get_comments_by_id(conn, comment_ids: list) -> typing.Union[list, None]:
         f'SELECT * FROM COMMENTS_ON_CLAIMS WHERE comment_id IN ({placeholders})',
         tuple(comment_ids)
     )]
+
+
+async def _insert_channel_async(db_file: str, channel_name: str, channel_id: str):
+    async with aiosqlite.connect(db_file) as db:
+        await db.execute('INSERT INTO CHANNEL(ClaimId, Name) VALUES (?, ?)',
+                         (channel_id, channel_name))
+        await db.commit()
+
+
+async def _insert_comment_async(db_file: str, claim_id: str = None, comment: str = None,
+                    channel_id: str = None, signature: str = None, parent_id: str = None) -> str:
+    timestamp = time.time_ns()
+    comment_prehash = ':'.join((claim_id, comment, str(timestamp),))
+    comment_prehash = bytes(comment_prehash.encode('utf-8'))
+    comment_id = nacl.hash.sha256(comment_prehash).decode('utf-8')
+    async with aiosqlite.connect(db_file) as db:
+        await db.execute(
+            """
+            INSERT INTO COMMENT(CommentId, LbryClaimId, ChannelId, Body, 
+                                            ParentId, Signature, Timestamp) 
+            VALUES (?, ?, ?, ?, ?, ?, ?) 
+            """,
+            (comment_id, claim_id, channel_id, comment, parent_id, signature, timestamp)
+        )
+        await db.commit()
+    return comment_id
+
+
+
+async def create_comment_async(db_file: str, comment: str, claim_id: str, **kwargs):
+    channel_id = kwargs.pop('channel_id', '')
+    channel_name = kwargs.pop('channel_name', '')
+    if channel_id or channel_name:
+        try:
+            validate_input(
+                comment=comment,
+                claim_id=claim_id,
+                channel_id=channel_id,
+                channel_name=channel_name,
+            )
+            await _insert_channel_async(db_file, channel_name, channel_id)
+        except AssertionError:
+            return None
+    else:
+        channel_id = ANONYMOUS['channel_id']
+    comment_id = await _insert_comment_async(
+        db_file=db_file, comment=comment, claim_id=claim_id, channel_id=channel_id, **kwargs
+    )
+    async with await aiosqlite.connect(db_file) as db:
+        db.row_factory = aiosqlite.Row
+        curs = await db.execute(
+            'SELECT * FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?', (comment_id,)
+        )
+        thing = await curs.fetchone()
+        await curs.close()
+        return dict(thing) if thing else None
 
 
 if __name__ == '__main__':

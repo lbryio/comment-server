@@ -80,7 +80,7 @@ class TestCommentCreation(DatabaseTestCase):
         comment = db.create_comment(
             conn=self.conn,
             claim_id=self.claimId,
-            comment='This is an anonymous comment'
+            comment='This is an ANONYMOUS comment'
         )
         self.assertIsNotNone(comment)
         self.assertIn('comment', comment)
@@ -163,7 +163,7 @@ class TestCommentCreation(DatabaseTestCase):
             claim_id=self.claimId,
             channel_name='',
             channel_id='529357c3422c6046d3fec76be2358001ba224b23',
-            comment='this username should not default to anonymous'
+            comment='this username should not default to ANONYMOUS'
         )
         self.assertIsNone(comment)
         short_username = db.create_comment(
