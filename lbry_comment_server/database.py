@@ -3,7 +3,7 @@ import typing
 import re
 import nacl.hash
 import time
-from src.conf import *
+from lbry_comment_server.conf import *
 
 
 def validate_input(**kwargs):

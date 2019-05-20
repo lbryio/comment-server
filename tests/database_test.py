@@ -4,8 +4,8 @@ from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
 
-import src.conf
-import src.database as db
+import conf
+import lbry_comment_server.database as db
 import sqlite3
 import faker
 from random import randint

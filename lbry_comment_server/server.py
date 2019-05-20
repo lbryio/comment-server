@@ -3,8 +3,8 @@ import json
 
 from aiohttp import web
 
-from src import database_dir
-from src.database import DatabaseConnection
+from lbry_comment_server import database_dir
+from lbry_comment_server.database import DatabaseConnection
 
 ERRORS = {
     'INVALID_PARAMS': {'code': -32602, 'message': 'Invalid parameters'},
