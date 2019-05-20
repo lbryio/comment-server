@@ -1,7 +1,8 @@
 import asyncio
 from aiohttp import web
 
-import server.database as db
+from server.database import DatabaseConnection
+from server.conf import database_dir
 
 ERRORS = {
     'INVALID_PARAMS': {'code': -32602, 'message': 'Invalid parameters'},
@@ -17,34 +18,53 @@ class CommentServer:
         self.app.add_routes([web.post('/api', self.api)])
         self.runner = None
         self.server = None
+        self.db_conn = DatabaseConnection(database_dir)
+
+    def ping(cls):
+        return 'pong'
 
     methods = {
-        'get_claim_comments': db.get_claim_comments,
-        'get_comment_ids': db.get_comment_ids,
-        'get_comments_by_id': db.get_comments_by_id,
-        'create_comment': db.create_comment,
+        'ping': ping,
+        'get_claim_comments': None,
+        'get_comment_ids': None,
+        'get_comments_by_id': None,
+        'create_comment': None
+    }
+
+    __methods = {
+        'ping'
+    }
+
+    __db_methods = {
+        'get_claim_comments',
+        'get_comment_ids',
+        'get_comments_by_id',
+        'create_comment'
     }
 
     def process_json(self, body) -> dict:
         response = {'jsonrpc': '2.0', 'id': body['id']}
         if body['method'] in self.methods:
+            method = body['method']
             params = body.get('params', {})
-            result = self.methods[body['method']](self, **params)
-            if type(result) is dict and 'error' in result:
-                response['error'] = result['error']
+            if method in self.__db_methods:
+                result = self.db_conn.__getattribute__(method).__call__(**params)
             else:
-                response['result'] = result
+                result = self.__methods[method](self, **params)
+            response['result'] = result
         else:
             response['error'] = ERRORS['UNKNOWN']
         return response
 
     async def _start(self):
+        self.db_conn.obtain_connection()
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
         self.server = web.TCPSite(self.runner, 'localhost', self.port)
         await self.server.start()
 
     async def _stop(self):
+        self.db_conn.connection.close()
         await self.runner.cleanup()
 
     async def run(self, max_timeout=3600):
@@ -59,9 +79,9 @@ class CommentServer:
     async def api(self, request):
         body = await request.json()
         if type(body) is list or type(body) is dict:
-            if type(body) is list:
+            if type(body) is list:  # batch request
                 response = [self.process_json(part) for part in body]
-            else:
+            else:  # single rpc request
                 response = self.process_json(body)
             return web.json_response(response)
         else:
