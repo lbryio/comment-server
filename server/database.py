@@ -35,6 +35,10 @@ class DatabaseConnection:
         with open(filepath, 'r') as ddl_file:
             self.connection.executescript(ddl_file.read())
 
+    def create_backup(self):
+        with sqlite3.connect(backup_dir) as back:
+            self.connection.backup(back)
+
     def get_claim_comments(self, claim_id: str,
                            parent_id: str = None,
                            page: int = 1,
@@ -142,15 +146,12 @@ class DatabaseConnection:
 
     def get_comments_by_id(self, comment_ids: list) -> typing.Union[list, None]:
         """ Returns a list containing the comment data associated with each ID within the list"""
-        if len(comment_ids) == 0:
-            return None
+        # format the input, under the assumption that the
         placeholders = ', '.join('?' for _ in comment_ids)
-        curs = self.connection.execute(
+        return [dict(row) for row in self.connection.execute(
             f'SELECT * FROM COMMENTS_ON_CLAIMS WHERE comment_id IN ({placeholders})',
             tuple(comment_ids)
-
-        )
-        return [dict(row) for row in curs.fetchall()]
+        )]
 
 
 if __name__ == '__main__':
