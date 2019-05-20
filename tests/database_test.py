@@ -224,6 +224,39 @@ class PopulatedDatabaseTest(DatabaseTestCase):
                 self.assertEqual(len(replies), len(comments_ids))
 
 
+class ListDatabaseTest(DatabaseTestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        top_coms, self.claim_ids = generate_top_comments(5, 75)
+        self.top_comments = {
+            commie_id: [self.db.create_comment(**commie) for commie in commie_list]
+            for commie_id, commie_list in top_coms.items()
+        }
+        self.replies = [
+            self.db.create_comment(**reply)
+            for reply in generate_replies(self.top_comments)
+        ]
+
+    def testLists(self):
+        for claim_id in self.claim_ids:
+            with self.subTest(claim_id=claim_id):
+                comments = self.db.get_claim_comments(claim_id)
+                self.assertIsNotNone(comments)
+                self.assertLessEqual(len(comments), 50)
+                top_comments = self.db.get_claim_comments(claim_id, top_level=True, page=1, page_size=50)
+                self.assertIsNotNone(top_comments)
+                self.assertLessEqual(len(top_comments), 50)
+                comment_ids = self.db.get_comment_ids(claim_id, page_size=50, page=1)
+                with self.subTest(comment_ids=comment_ids):
+                    self.assertIsNotNone(comment_ids)
+                    self.assertLessEqual(len(comment_ids), 50)
+                    matching_comments = self.db.get_comments_by_id(comment_ids)
+                    self.assertIsNotNone(matching_comments)
+                    self.assertEqual(len(matching_comments), len(comment_ids))
+
+
+
+
 def generate_replies(top_comments):
     return [{
         'claim_id': comment['claim_id'],
@@ -254,16 +287,16 @@ def generate_replies_random(top_comments):
     ]
 
 
-def generate_top_comments():
-    claim_ids = [fake.sha1() for _ in range(15)]
+def generate_top_comments(ncid=15, ncomm=100, minchar=50, maxchar=500):
+    claim_ids = [fake.sha1() for _ in range(ncid)]
     top_comments = {
         cid: [{
             'claim_id': cid,
-            'comment': ''.join(fake.text(max_nb_chars=randint(50, 500))),
+            'comment': ''.join(fake.text(max_nb_chars=randint(minchar, maxchar))),
             'channel_name': '@' + fake.user_name(),
             'channel_id': fake.sha1(),
             'signature': fake.uuid4()
-        } for _ in range(100)]
+        } for _ in range(ncomm)]
         for cid in claim_ids
     }
     return top_comments, claim_ids
@@ -282,4 +315,3 @@ def generate_top_comments_random():
         for cid in claim_ids
     }
     return top_comments, claim_ids
-
