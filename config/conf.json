@@ -1,0 +1,14 @@
+{
+  "files": {
+    "schema": "schema/comments_ddl.sql",
+    "main": "database/comments.db",
+    "backup": "database/comments.backup.db",
+    "dev": "database/example.db"
+  },
+  "anonymous": {
+    "channel_id": "9cb713f01bf247a0e03170b5ed00d5161340c486",
+    "channel_name": "@Anonymous"
+  },
+  "host": "localhost",
+  "port": "2903"
+}
