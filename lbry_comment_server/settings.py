@@ -14,4 +14,4 @@ def get_config(filepath):
 
 
 config = get_config(config_path)
-print(json.dumps(config, indent=4))
+# print(json.dumps(config, indent=4))
