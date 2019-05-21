@@ -3,7 +3,34 @@
 This is a rewrite & update of the server 
 [written by myself and Grayson Burton here](https://github.com/ocornoc/lbry-comments)
 
+### Install & Setup
 
+Clone the repo and install a virtual environement: 
+
+```bash
+# clone the repo
+$ git clone https://github.com/osilkin98/comment-server
+
+# create a virtual environment in any (current) version of python3.X
+$ virtualenv --python=python3 venv`
+$ source venv/bin/activate` 
+
+# install the dependencies
+(venv) $ pip install -r requirements.txt`
+```
+
+### Running the server
+
+Just run:
+`(venv) $ python lbry_comment_server/main.py`
+and it should run automatically.
+
+
+## Schema
+![schema](schema.png)
+
+
+## About
 A lot of the design is more or less the same with the original,
 except this version focuses less on performance and more on scalability. 
 
@@ -19,5 +46,4 @@ in comparison to SQLite's execution speed,
 so there is no sensibility in multi-threading from the 
 perspective of the server code itself. 
 
-The schema for 
 
