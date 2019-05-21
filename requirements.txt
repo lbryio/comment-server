@@ -1,5 +1,5 @@
-faker
-asyncio
-aiohttp
-aiojobs
-aiosqlite
+Faker==1.0.7
+asyncio==3.4.3
+aiohttp==3.5.4
+aiojobs==0.2.2
+aiosqlite==0.10.0
