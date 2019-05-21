@@ -1,9 +1,13 @@
 import json
+import sqlite3
 import asyncio
 from aiojobs.aiohttp import atomic
 from aiohttp import web
-from lbry_comment_server import create_comment, get_claim_comments
-from lbry_comment_server import  get_comments_by_id, get_comment_ids
+from lbry_comment_server.database import obtain_connection
+from lbry_comment_server.settings import config
+from lbry_comment_server import get_claim_comments
+from lbry_comment_server import get_comments_by_id, get_comment_ids
+import lbry_comment_server.writes as writes
 
 ERRORS = {
     'INVALID_PARAMS': {'code': -32602, 'message': 'Invalid parameters'},
@@ -12,25 +16,28 @@ ERRORS = {
 }
 
 
-def ping():
+def ping(*args):
     return 'pong'
 
 
-@atomic
-async def handle_create_comment(**kwargs):
-    pass
+def handle_get_comment_ids(app, **kwargs):
+    with obtain_connection(app['db_path']) as conn:
+        return get_comment_ids(conn, **kwargs)
 
 
-def handle_get_comment_ids(**kwargs):
-    pass
+def handle_get_claim_comments(app, **kwargs):
+    with obtain_connection(app['db_path']) as conn:
+        return get_claim_comments(conn, **kwargs)
 
 
-def handle_get_claim_comments(**kwargs):
-    pass
+def handle_get_comments_by_id(app, **kwargs):
+    with obtain_connection(app['db_path']) as conn:
+        return get_comments_by_id(conn, **kwargs)
 
 
-def handle_get_comments_by_id(**kwargs):
-    pass
+async def handle_create_comment(scheduler, **kwargs):
+    job = await scheduler.spawn(writes.write_comment(**kwargs))
+    return await job.wait()
 
 
 METHODS = {
@@ -42,16 +49,16 @@ METHODS = {
 }
 
 
-def process_json(body: dict) -> dict:
+async def process_json(app, body: dict) -> dict:
     response = {'jsonrpc': '2.0', 'id': body['id']}
     if body['method'] in METHODS:
         method = body['method']
         params = body.get('params', {})
         try:
-            if method in self.__db_methods:
-                result = self.db_conn.__getattribute__(method).__call__(**params)
+            if asyncio.iscoroutinefunction(METHODS[method]):
+                result = await METHODS[method](app['comment_scheduler'], **params)
             else:
-                result = self.methods[method](self, **params)
+                result = METHODS[method](app, **params)
             response['result'] = result
         except TypeError as te:
             print(te)
@@ -61,14 +68,17 @@ def process_json(body: dict) -> dict:
     return response
 
 
-async def api_endpoint(request):
+@atomic
+async def api_endpoint(request: web.Request):
     try:
         body = await request.json()
         if type(body) is list or type(body) is dict:
             if type(body) is list:
-                return web.json_response([process_json(part) for part in body])
+                return web.json_response(
+                    [await process_json(request.app, part) for part in body]
+                )
             else:
-                return web.json_response(process_json(body))
+                return web.json_response(await process_json(request.app, body))
         else:
             return web.json_response({'error': ERRORS['UNKNOWN']})
     except json.decoder.JSONDecodeError as jde:

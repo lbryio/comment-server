@@ -8,7 +8,6 @@ from lbry_comment_server.settings import config
 
 
 def obtain_connection(filepath: str = None, row_factory: bool = True):
-    filepath = filepath if filepath else config['PATH']['DATABASE']
     connection = sqlite3.connect(filepath)
     if row_factory:
         connection.row_factory = sqlite3.Row
