@@ -4,7 +4,7 @@ import aiojobs.aiohttp
 import asyncio
 from aiohttp import web
 
-import lbry_comment_server.writes as writes
+from lbry_comment_server.writes import create_comment_scheduler, DatabaseWriter
 import schema.db_helpers as helpers
 from lbry_comment_server.database import obtain_connection
 from lbry_comment_server.handles import api_endpoint
@@ -54,8 +54,8 @@ async def create_database_backup(app):
 
 async def start_background_tasks(app: web.Application):
     app['waitful_backup'] = app.loop.create_task(create_database_backup(app))
-    app['comment_scheduler'] = await writes.create_comment_scheduler()
-    app['writer'] = writes.DatabaseWriter(config['PATH']['DEFAULT'])
+    app['comment_scheduler'] = await create_comment_scheduler()
+    app['writer'] = DatabaseWriter(config['PATH']['DEFAULT'])
 
 
 async def cleanup_background_tasks(app):
