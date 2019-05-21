@@ -4,8 +4,8 @@ from unittest.case import _Outcome
 
 import asyncio
 
-import lbry_comment_server.database as db
-import schema.db_helpers as schema
+from lbry_comment_server.database import obtain_connection
+from schema.db_helpers import setup_database, teardown_database
 from lbry_comment_server.settings import config
 
 
@@ -120,11 +120,11 @@ class AsyncioTestCase(unittest.TestCase):
 class DatabaseTestCase(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
-        schema.setup_database(config['PATH']['TEST'])
-        self.conn = db.obtain_connection(config['PATH']['TEST'])
+        setup_database(config['PATH']['TEST'])
+        self.conn = obtain_connection(config['PATH']['TEST'])
 
     def tearDown(self) -> None:
         self.conn.close()
-        schema.teardown_database(config['PATH']['TEST'])
+        teardown_database(config['PATH']['TEST'])
 
 

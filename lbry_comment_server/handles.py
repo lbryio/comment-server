@@ -5,7 +5,7 @@ import asyncio
 from aiohttp import web
 from aiojobs.aiohttp import atomic
 
-import lbry_comment_server.writes as writes
+from lbry_comment_server.writes import write_comment
 from lbry_comment_server.database import get_claim_comments
 from lbry_comment_server.database import get_comments_by_id, get_comment_ids
 from lbry_comment_server.database import obtain_connection
@@ -39,7 +39,7 @@ def handle_get_comments_by_id(app, **kwargs):
 
 
 async def handle_create_comment(scheduler, **kwargs):
-    job = await scheduler.spawn(writes.write_comment(**kwargs))
+    job = await scheduler.spawn(write_comment(**kwargs))
     return await job.wait()
 
 

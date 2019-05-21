@@ -4,7 +4,7 @@ import logging
 import aiojobs
 from asyncio import coroutine
 
-import lbry_comment_server.database as db
+from lbry_comment_server.database import obtain_connection, create_comment
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class DatabaseWriter(object):
 
     def __init__(self, db_file):
         if not DatabaseWriter._writer:
-            self.conn = db.obtain_connection(db_file)
+            self.conn = obtain_connection(db_file)
             DatabaseWriter._writer = self
             atexit.register(self.cleanup)
             logging.info('Database writer has been created at %s', repr(self))
@@ -39,4 +39,4 @@ async def create_comment_scheduler():
 
 async def write_comment(**comment):
     with DatabaseWriter._writer.connection as conn:
-        return await coroutine(db.create_comment)(conn, **comment)
+        return await coroutine(create_comment)(conn, **comment)

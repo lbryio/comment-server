@@ -5,8 +5,9 @@ from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
 
-import lbry_comment_server.database as db
-import schema.db_helpers as schema
+from lbry_comment_server.database import get_comments_by_id, create_comment, get_comment_ids, create_comment_async, \
+    get_claim_comments
+from schema.db_helpers import setup_database, teardown_database
 from lbry_comment_server.settings import config
 from tests.testcase import DatabaseTestCase, AsyncioTestCase
 
@@ -22,7 +23,7 @@ class TestCommentCreation(DatabaseTestCase):
         self.claimId = '529357c3422c6046d3fec76be2358004ba22e340'
 
     def test01NamedComments(self):
-        comment = db.create_comment(
+        comment = create_comment(
             conn=self.conn,
             claim_id=self.claimId,
             comment='This is a named comment',
@@ -32,7 +33,7 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertIsNotNone(comment)
         self.assertIsNone(comment['parent_id'])
         previous_id = comment['comment_id']
-        reply = db.create_comment(
+        reply = create_comment(
             conn=self.conn,
             claim_id=self.claimId,
             comment='This is a named response',
@@ -45,7 +46,7 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertEqual(reply['claim_id'], comment['claim_id'])
 
     def test02AnonymousComments(self):
-        comment = db.create_comment(
+        comment = create_comment(
             conn=self.conn,
             claim_id=self.claimId,
             comment='This is an ANONYMOUS comment'
@@ -53,7 +54,7 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertIsNotNone(comment)
         self.assertIsNone(comment['parent_id'])
         previous_id = comment['comment_id']
-        reply = db.create_comment(
+        reply = create_comment(
             conn=self.conn,
             claim_id=self.claimId,
             comment='This is an unnamed response',
@@ -64,7 +65,7 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertEqual(reply['claim_id'], comment['claim_id'])
 
     def test03SignedComments(self):
-        comment = db.create_comment(
+        comment = create_comment(
             conn=self.conn,
             claim_id=self.claimId,
             comment='I like big butts and i cannot lie',
@@ -75,7 +76,7 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertIsNotNone(comment)
         self.assertIsNone(comment['parent_id'])
         previous_id = comment['comment_id']
-        reply = db.create_comment(
+        reply = create_comment(
             conn=self.conn,
             claim_id=self.claimId,
             comment='This is a LBRY verified response',
@@ -89,7 +90,7 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertEqual(reply['claim_id'], comment['claim_id'])
 
     def test04UsernameVariations(self):
-        invalid_comment = db.create_comment(
+        invalid_comment = create_comment(
             conn=self.conn,
             claim_id=self.claimId,
             channel_name='$#(@#$@#$',
@@ -97,7 +98,7 @@ class TestCommentCreation(DatabaseTestCase):
             comment='this is an invalid username'
         )
         self.assertIsNone(invalid_comment)
-        valid_username = db.create_comment(
+        valid_username = create_comment(
             conn=self.conn,
             claim_id=self.claimId,
             channel_name='@' + 'a'*255,
@@ -106,7 +107,7 @@ class TestCommentCreation(DatabaseTestCase):
         )
         self.assertIsNotNone(valid_username)
 
-        lengthy_username = db.create_comment(
+        lengthy_username = create_comment(
             conn=self.conn,
             claim_id=self.claimId,
             channel_name='@' + 'a'*256,
@@ -114,7 +115,7 @@ class TestCommentCreation(DatabaseTestCase):
             comment='this username is too long'
         )
         self.assertIsNone(lengthy_username)
-        comment = db.create_comment(
+        comment = create_comment(
             conn=self.conn,
             claim_id=self.claimId,
             channel_name='',
@@ -122,7 +123,7 @@ class TestCommentCreation(DatabaseTestCase):
             comment='this username should not default to ANONYMOUS'
         )
         self.assertIsNone(comment)
-        short_username = db.create_comment(
+        short_username = create_comment(
             conn=self.conn,
             claim_id=self.claimId,
             channel_name='@',
@@ -138,7 +139,7 @@ class TestCommentCreation(DatabaseTestCase):
         for _, comments in top_comments.items():
             for i, comment in enumerate(comments):
                 with self.subTest(comment=comment):
-                    result = db.create_comment(self.conn, **comment)
+                    result = create_comment(self.conn, **comment)
                     if result:
                         success += 1
                     comments[i] = result
@@ -148,7 +149,7 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertGreater(success, 0)
         success = 0
         for reply in generate_replies_random(top_comments):
-            reply_id = db.create_comment(self.conn, **reply)
+            reply_id = create_comment(self.conn, **reply)
             if reply_id:
                 success += 1
         self.assertGreater(success, 0)
@@ -161,7 +162,7 @@ class TestCommentCreation(DatabaseTestCase):
         total, success = 0, 0
         for _, comments in top_comments.items():
             for i, comment in enumerate(comments):
-                result = db.create_comment(self.conn, **comment)
+                result = create_comment(self.conn, **comment)
                 if result:
                     success += 1
                 comments[i] = result
@@ -170,14 +171,14 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertEqual(total, success)
         self.assertGreater(total, 0)
         for reply in generate_replies(top_comments):
-            db.create_comment(self.conn, **reply)
+            create_comment(self.conn, **reply)
         for claim_id in claim_ids:
-            comments_ids = db.get_comment_ids(self.conn, claim_id)
+            comments_ids = get_comment_ids(self.conn, claim_id)
             with self.subTest(comments_ids=comments_ids):
                 self.assertIs(type(comments_ids), list)
                 self.assertGreaterEqual(len(comments_ids), 0)
                 self.assertLessEqual(len(comments_ids), 50)
-                replies = db.get_comments_by_id(self.conn, comments_ids)
+                replies = get_comments_by_id(self.conn, comments_ids)
                 self.assertLessEqual(len(replies), 50)
                 self.assertEqual(len(replies), len(comments_ids))
 
@@ -187,28 +188,28 @@ class ListDatabaseTest(DatabaseTestCase):
         super().setUp()
         top_coms, self.claim_ids = generate_top_comments(5, 75)
         self.top_comments = {
-            commie_id: [db.create_comment(self.conn, **commie) for commie in commie_list]
+            commie_id: [create_comment(self.conn, **commie) for commie in commie_list]
             for commie_id, commie_list in top_coms.items()
         }
         self.replies = [
-            db.create_comment(self.conn, **reply)
+            create_comment(self.conn, **reply)
             for reply in generate_replies(self.top_comments)
         ]
 
     def testLists(self):
         for claim_id in self.claim_ids:
             with self.subTest(claim_id=claim_id):
-                comments = db.get_claim_comments(self.conn, claim_id)
+                comments = get_claim_comments(self.conn, claim_id)
                 self.assertIsNotNone(comments)
                 self.assertLessEqual(len(comments), 50)
-                top_comments = db.get_claim_comments(self.conn, claim_id, top_level=True, page=1, page_size=50)
+                top_comments = get_claim_comments(self.conn, claim_id, top_level=True, page=1, page_size=50)
                 self.assertIsNotNone(top_comments)
                 self.assertLessEqual(len(top_comments), 50)
-                comment_ids = db.get_comment_ids(self.conn, claim_id, page_size=50, page=1)
+                comment_ids = get_comment_ids(self.conn, claim_id, page_size=50, page=1)
                 with self.subTest(comment_ids=comment_ids):
                     self.assertIsNotNone(comment_ids)
                     self.assertLessEqual(len(comment_ids), 50)
-                    matching_comments = db.get_comments_by_id(self.conn, comment_ids)
+                    matching_comments = get_comments_by_id(self.conn, comment_ids)
                     self.assertIsNotNone(matching_comments)
                     self.assertEqual(len(matching_comments), len(comment_ids))
 
@@ -221,14 +222,14 @@ class AsyncWriteTest(AsyncioTestCase):
 
     async def asyncSetUp(self):
         await super().asyncSetUp()
-        schema.setup_database(self.db_path)
+        setup_database(self.db_path)
 
     async def asyncTearDown(self):
         await super().asyncTearDown()
-        schema.teardown_database(self.db_path)
+        teardown_database(self.db_path)
 
     async def test01NamedComments(self):
-        comment = await db.create_comment_async(
+        comment = await create_comment_async(
             self.db_path,
             claim_id=self.claimId,
             comment='This is a named comment',
@@ -238,7 +239,7 @@ class AsyncWriteTest(AsyncioTestCase):
         self.assertIsNotNone(comment)
         self.assertIsNone(comment['parent_id'])
         previous_id = comment['comment_id']
-        reply = await db.create_comment_async(
+        reply = await create_comment_async(
             self.db_path,
             claim_id=self.claimId,
             comment='This is a named response',
@@ -251,7 +252,7 @@ class AsyncWriteTest(AsyncioTestCase):
         self.assertEqual(reply['claim_id'], comment['claim_id'])
 
     async def test02AnonymousComments(self):
-        comment = await db.create_comment_async(
+        comment = await create_comment_async(
             self.db_path,
             claim_id=self.claimId,
             comment='This is an ANONYMOUS comment'
@@ -259,7 +260,7 @@ class AsyncWriteTest(AsyncioTestCase):
         self.assertIsNotNone(comment)
         self.assertIsNone(comment['parent_id'])
         previous_id = comment['comment_id']
-        reply = await db.create_comment_async(
+        reply = await create_comment_async(
             self.db_path,
             claim_id=self.claimId,
             comment='This is an unnamed response',
@@ -270,7 +271,7 @@ class AsyncWriteTest(AsyncioTestCase):
         self.assertEqual(reply['claim_id'], comment['claim_id'])
 
     async def test03SignedComments(self):
-        comment = await db.create_comment_async(
+        comment = await create_comment_async(
             self.db_path,
             claim_id=self.claimId,
             comment='I like big butts and i cannot lie',
@@ -281,7 +282,7 @@ class AsyncWriteTest(AsyncioTestCase):
         self.assertIsNotNone(comment)
         self.assertIsNone(comment['parent_id'])
         previous_id = comment['comment_id']
-        reply = await db.create_comment_async(
+        reply = await create_comment_async(
             self.db_path,
             claim_id=self.claimId,
             comment='This is a LBRY verified response',
@@ -295,7 +296,7 @@ class AsyncWriteTest(AsyncioTestCase):
         self.assertEqual(reply['claim_id'], comment['claim_id'])
 
     async def test04UsernameVariations(self):
-        invalid_comment = await db.create_comment_async(
+        invalid_comment = await create_comment_async(
             self.db_path,
             claim_id=self.claimId,
             channel_name='$#(@#$@#$',
@@ -303,7 +304,7 @@ class AsyncWriteTest(AsyncioTestCase):
             comment='this is an invalid username'
         )
         self.assertIsNone(invalid_comment)
-        valid_username = await db.create_comment_async(
+        valid_username = await create_comment_async(
             self.db_path,
             claim_id=self.claimId,
             channel_name='@' + 'a'*255,
@@ -312,7 +313,7 @@ class AsyncWriteTest(AsyncioTestCase):
         )
         self.assertIsNotNone(valid_username)
 
-        lengthy_username = await db.create_comment_async(
+        lengthy_username = await create_comment_async(
             self.db_path,
             claim_id=self.claimId,
             channel_name='@' + 'a'*256,
@@ -320,7 +321,7 @@ class AsyncWriteTest(AsyncioTestCase):
             comment='this username is too long'
         )
         self.assertIsNone(lengthy_username)
-        comment = await db.create_comment_async(
+        comment = await create_comment_async(
             self.db_path,
             claim_id=self.claimId,
             channel_name='',
@@ -328,7 +329,7 @@ class AsyncWriteTest(AsyncioTestCase):
             comment='this username should not default to ANONYMOUS'
         )
         self.assertIsNone(comment)
-        short_username = await db.create_comment_async(
+        short_username = await create_comment_async(
             self.db_path,
             claim_id=self.claimId,
             channel_name='@',
@@ -342,7 +343,7 @@ class AsyncWriteTest(AsyncioTestCase):
         total, success = 0, 0
         for _, comments in top_comments.items():
             for i, comment in enumerate(comments):
-                result = await db.create_comment_async(self.db_path, **comment)
+                result = await create_comment_async(self.db_path, **comment)
                 if result:
                     success += 1
                 comments[i] = result
@@ -352,7 +353,7 @@ class AsyncWriteTest(AsyncioTestCase):
         self.assertGreater(total, 0)
         success, total = 0, 0
         for reply in generate_replies(top_comments):
-            inserted_reply = await db.create_comment_async(self.db_path, **reply)
+            inserted_reply = await create_comment_async(self.db_path, **reply)
             if inserted_reply:
                 success += 1
             total += 1
