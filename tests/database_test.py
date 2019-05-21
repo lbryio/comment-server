@@ -5,10 +5,10 @@ from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
 
-from lbry_comment_server.database import get_comments_by_id, create_comment, get_comment_ids, create_comment_async, \
+from src.database import get_comments_by_id, create_comment, get_comment_ids, create_comment_async, \
     get_claim_comments
 from schema.db_helpers import setup_database, teardown_database
-from lbry_comment_server.settings import config
+from src.settings import config
 from tests.testcase import DatabaseTestCase, AsyncioTestCase
 
 fake = faker.Faker()

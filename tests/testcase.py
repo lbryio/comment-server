@@ -4,9 +4,9 @@ from unittest.case import _Outcome
 
 import asyncio
 
-from lbry_comment_server.database import obtain_connection
+from src.database import obtain_connection
 from schema.db_helpers import setup_database, teardown_database
-from lbry_comment_server.settings import config
+from src.settings import config
 
 
 class AsyncioTestCase(unittest.TestCase):

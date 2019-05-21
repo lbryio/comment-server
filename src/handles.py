@@ -5,10 +5,10 @@ import asyncio
 from aiohttp import web
 from aiojobs.aiohttp import atomic
 
-from lbry_comment_server.writes import write_comment
-from lbry_comment_server.database import get_claim_comments
-from lbry_comment_server.database import get_comments_by_id, get_comment_ids
-from lbry_comment_server.database import obtain_connection
+from src.writes import write_comment
+from src.database import get_claim_comments
+from src.database import get_comments_by_id, get_comment_ids
+from src.database import obtain_connection
 
 logger = logging.getLogger(__name__)
 

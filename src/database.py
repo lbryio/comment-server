@@ -7,7 +7,7 @@ import typing
 import aiosqlite
 import nacl.hash
 
-from lbry_comment_server.settings import config
+from src.settings import config
 
 logger = logging.getLogger(__name__)
 

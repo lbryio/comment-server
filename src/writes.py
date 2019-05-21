@@ -4,7 +4,7 @@ import logging
 import aiojobs
 from asyncio import coroutine
 
-from lbry_comment_server.database import obtain_connection, create_comment
+from src.database import obtain_connection, create_comment
 
 logger = logging.getLogger(__name__)
 

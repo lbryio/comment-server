@@ -5,13 +5,13 @@ import asyncio
 from aiohttp import web
 
 import schema.db_helpers
-from lbry_comment_server.database import obtain_connection
-from lbry_comment_server.handles import api_endpoint
-from lbry_comment_server.settings import config
-from lbry_comment_server.writes import create_comment_scheduler, DatabaseWriter
+from src.database import obtain_connection
+from src.handles import api_endpoint
+from src.settings import config
+from src.writes import create_comment_scheduler, DatabaseWriter
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 
 formatter = logging.Formatter(config['LOGGING_FORMAT'])
 debug_handler = logging.FileHandler(config['PATH']['LOG'])
@@ -86,14 +86,16 @@ async def stop_app(runner):
     await runner.cleanup()
 
 
-async def run_app(app, duration=3600):
+async def run_app(app):
     runner = None
     try:
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, config['HOST'], config['PORT'])
         await site.start()
-        await asyncio.sleep(duration)
+        while True:
+
+            await asyncio.sleep(2**63)
     except asyncio.CancelledError as cerr:
         pass
     finally:
