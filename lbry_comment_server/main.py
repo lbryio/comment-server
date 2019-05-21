@@ -50,17 +50,20 @@ async def create_database_backup(app):
                 helpers.backup_database(conn, app['backup'])
 
     except asyncio.CancelledError as e:
-        logger.exception('Database backup loop has been cancelled')
-
+        pass
 
 async def start_background_tasks(app: web.Application):
     app['waitful_backup'] = app.loop.create_task(create_database_backup(app))
+    app['comment_scheduler'] = await writes.create_comment_scheduler()
+    app['writer'] = writes.DatabaseWriter(config['PATH']['DEFAULT'])
 
 
 async def cleanup_background_tasks(app):
     logger.debug('Ending background backup loop')
     app['waitful_backup'].cancel()
     await app['waitful_backup']
+    app['reader'].close()
+    app['writer'].close()
 
 
 def create_app(**kwargs):
@@ -84,8 +87,6 @@ async def stop_app(runner):
 
 
 async def run_app(app, duration=3600):
-    app['comment_scheduler'] = await writes.create_comment_scheduler()
-    app['writer'] = writes.DatabaseWriter(config['PATH']['DEFAULT'])
     runner = None
     try:
         runner = web.AppRunner(app)
@@ -94,11 +95,16 @@ async def run_app(app, duration=3600):
         await site.start()
         await asyncio.sleep(duration)
     except asyncio.CancelledError as cerr:
-        logger.exception('Got cancellation signal', )
+        pass
     finally:
         await stop_app(runner)
 
 
 if __name__ == '__main__':
     appl = create_app(close_timeout=5.0)
-    asyncio.run(run_app(appl))
+    try:
+        asyncio.run(web.run_app(appl, access_log=logger, host=config['HOST'], port=config['PORT']))
+    except asyncio.CancelledError:
+        pass
+    except ValueError:
+        pass

@@ -12,7 +12,7 @@
     "CHANNEL_ID": "9cb713f01bf247a0e03170b5ed00d5161340c486",
     "CHANNEL_NAME": "@Anonymous"
   },
-  "LOGGING_FORMAT": "%(asctime)s - %(name)s - %(level)s - %(message)s",
+  "LOGGING_FORMAT": "%(asctime)s - %(levelname)s - %(module)s - %(funcName)s - %(message)s",
   "HOST": "localhost",
   "PORT": 2903,
   "BACKUP_INT": 3600

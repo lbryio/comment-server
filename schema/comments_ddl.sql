@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS CHANNEL(
 );
 
 
-DROP TABLE IF EXISTS COMMENT;
+-- DROP TABLE IF EXISTS COMMENT;
 CREATE TABLE IF NOT EXISTS COMMENT (
     CommentId   TEXT    NOT NULL,
     LbryClaimId TEXT    NOT NULL,
@@ -31,13 +31,13 @@ CREATE TABLE IF NOT EXISTS COMMENT (
 );
 
 -- indexes
-DROP INDEX IF EXISTS COMMENT_CLAIM_INDEX;
-CREATE INDEX COMMENT_CLAIM_INDEX ON COMMENT (LbryClaimId);
+-- DROP INDEX IF EXISTS COMMENT_CLAIM_INDEX;
+CREATE INDEX IF NOT EXISTS COMMENT_CLAIM_INDEX ON COMMENT (LbryClaimId);
 
 
 -- VIEWS
-DROP VIEW IF EXISTS COMMENTS_ON_CLAIMS;
-CREATE VIEW COMMENTS_ON_CLAIMS (comment_id, claim_id, timestamp, channel_name, channel_id, channel_uri, signature, parent_id, comment) AS
+-- DROP VIEW IF EXISTS COMMENTS_ON_CLAIMS;
+CREATE VIEW IF NOT EXISTS COMMENTS_ON_CLAIMS (comment_id, claim_id, timestamp, channel_name, channel_id, channel_uri, signature, parent_id, comment) AS
     SELECT C.CommentId, C.LbryClaimId, C.Timestamp, CHAN.Name, CHAN.ClaimId, 'lbry://' || CHAN.Name || '#' || CHAN.ClaimId, C.Signature, C.ParentId, C.Body
     FROM CHANNEL AS CHAN
     INNER JOIN COMMENT C on CHAN.ClaimId = C.ChannelId
@@ -45,8 +45,8 @@ CREATE VIEW COMMENTS_ON_CLAIMS (comment_id, claim_id, timestamp, channel_name, c
 
 
 
-DROP VIEW IF EXISTS COMMENT_REPLIES;
-CREATE VIEW COMMENT_REPLIES (Author, CommentBody, ParentAuthor, ParentCommentBody) AS
+-- DROP VIEW IF EXISTS COMMENT_REPLIES;
+CREATE VIEW IF NOT EXISTS COMMENT_REPLIES (Author, CommentBody, ParentAuthor, ParentCommentBody) AS
     SELECT AUTHOR.Name, OG.Body, PCHAN.Name, PARENT.Body FROM COMMENT AS OG
         JOIN  COMMENT AS PARENT
         ON OG.ParentId = PARENT.CommentId
