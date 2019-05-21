@@ -4,7 +4,7 @@ import aiojobs.aiohttp
 import asyncio
 from aiohttp import web
 
-from schema.db_helpers import backup_database, setup_database
+import schema.db_helpers
 from lbry_comment_server.database import obtain_connection
 from lbry_comment_server.handles import api_endpoint
 from lbry_comment_server.settings import config
@@ -33,7 +33,7 @@ logger.addHandler(stdout_handler)
 
 async def setup_db_schema(app):
     logger.info('Setting up schema in %s', app['db_path'])
-    setup_database(app['db_path'])
+    schema.db_helpers.setup_database(app['db_path'])
 
 
 async def close_comment_scheduler(app):
@@ -47,7 +47,7 @@ async def create_database_backup(app):
             await asyncio.sleep(app['config']['BACKUP_INT'])
             with obtain_connection(app['db_path']) as conn:
                 logger.debug('%s backing up database')
-                backup_database(conn, app['backup'])
+                schema.db_helpers.backup_database(conn, app['backup'])
 
     except asyncio.CancelledError as e:
         pass
