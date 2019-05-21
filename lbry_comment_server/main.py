@@ -4,11 +4,11 @@ import aiojobs.aiohttp
 import asyncio
 from aiohttp import web
 
-from lbry_comment_server.writes import create_comment_scheduler, DatabaseWriter
 import schema.db_helpers as helpers
 from lbry_comment_server.database import obtain_connection
 from lbry_comment_server.handles import api_endpoint
 from lbry_comment_server.settings import config
+from lbry_comment_server.writes import create_comment_scheduler, DatabaseWriter
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
