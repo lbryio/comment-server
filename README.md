@@ -12,11 +12,11 @@ Clone the repo and install a virtual environement:
 $ git clone https://github.com/osilkin98/comment-server
 
 # create a virtual environment in any (current) version of python3.X
-$ virtualenv --python=python3 venv`
-$ source venv/bin/activate` 
+$ virtualenv --python=python3 venv
+$ source venv/bin/activate 
 
 # install the dependencies
-(venv) $ pip install -r requirements.txt`
+(venv) $ pip install -r requirements.txt
 ```
 
 ### Running the server
