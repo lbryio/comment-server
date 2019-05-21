@@ -7,6 +7,7 @@ import lbry_comment_server.database as db
 from lbry_comment_server import config
 import schema.db_helpers as schema
 
+
 class AsyncioTestCase(unittest.TestCase):
     # Implementation inspired by discussion:
     #  https://bugs.python.org/issue32972
@@ -115,7 +116,6 @@ class AsyncioTestCase(unittest.TestCase):
                     self.loop.run_until_complete(maybe_coroutine)
 
 
-
 class DatabaseTestCase(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
@@ -123,21 +123,7 @@ class DatabaseTestCase(unittest.TestCase):
         self.conn = db.obtain_connection(config['PATH']['TEST'])
 
     def tearDown(self) -> None:
-        curs = self.conn.execute('SELECT * FROM COMMENT')
-        results = {'COMMENT': [dict(r) for r in curs.fetchall()]}
-        curs = self.conn.execute('SELECT * FROM CHANNEL')
-        results['CHANNEL'] = [dict(r) for r in curs.fetchall()]
-        curs = self.conn.execute('SELECT * FROM COMMENTS_ON_CLAIMS')
-        results['COMMENTS_ON_CLAIMS'] = [dict(r) for r in curs.fetchall()]
-        curs = self.conn.execute('SELECT * FROM COMMENT_REPLIES')
-        results['COMMENT_REPLIES'] = [dict(r) for r in curs.fetchall()]
-        # print(json.dumps(results, indent=4))
-        with self.conn:
-            self.conn.executescript("""
-                DROP TABLE IF EXISTS COMMENT;
-                DROP TABLE IF EXISTS CHANNEL;
-                DROP VIEW IF EXISTS COMMENTS_ON_CLAIMS;
-                DROP VIEW IF EXISTS COMMENT_REPLIES;
-            """)
         self.conn.close()
+        schema.teardown_database(config['PATH']['TEST'])
+
 

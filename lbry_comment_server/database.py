@@ -149,7 +149,7 @@ async def _insert_channel_async(db_file: str, channel_name: str, channel_id: str
 
 
 async def _insert_comment_async(db_file: str, claim_id: str = None, comment: str = None,
-                    channel_id: str = None, signature: str = None, parent_id: str = None) -> str:
+                                channel_id: str = None, signature: str = None, parent_id: str = None) -> str:
     timestamp = time.time_ns()
     comment_prehash = ':'.join((claim_id, comment, str(timestamp),))
     comment_prehash = bytes(comment_prehash.encode('utf-8'))
@@ -186,7 +186,7 @@ async def create_comment_async(db_file: str, comment: str, claim_id: str, **kwar
     comment_id = await _insert_comment_async(
         db_file=db_file, comment=comment, claim_id=claim_id, channel_id=channel_id, **kwargs
     )
-    async with await aiosqlite.connect(db_file) as db:
+    async with aiosqlite.connect(db_file) as db:
         db.row_factory = aiosqlite.Row
         curs = await db.execute(
             'SELECT * FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?', (comment_id,)
