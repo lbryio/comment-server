@@ -22,7 +22,7 @@ $ source venv/bin/activate
 ### Running the server
 
 Just run:
-`(venv) $ python lbry_comment_server/main.py`
+`(venv) $ python -m src.main.py`
 and it should run automatically.
 
 
