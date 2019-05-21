@@ -1,13 +1,15 @@
 import json
-import sqlite3
 import asyncio
 from aiojobs.aiohttp import atomic
 from aiohttp import web
+import logging
 from lbry_comment_server.database import obtain_connection
-from lbry_comment_server.settings import config
 from lbry_comment_server import get_claim_comments
 from lbry_comment_server import get_comments_by_id, get_comment_ids
 import lbry_comment_server.writes as writes
+
+
+logger = logging.getLogger(__name__)
 
 ERRORS = {
     'INVALID_PARAMS': {'code': -32602, 'message': 'Invalid parameters'},
@@ -61,7 +63,7 @@ async def process_json(app, body: dict) -> dict:
                 result = METHODS[method](app, **params)
             response['result'] = result
         except TypeError as te:
-            print(te)
+            logger.exception('Got TypeError: %s', te)
             response['error'] = ERRORS['INVALID_PARAMS']
     else:
         response['error'] = ERRORS['UNKNOWN']
@@ -72,6 +74,7 @@ async def process_json(app, body: dict) -> dict:
 async def api_endpoint(request: web.Request):
     try:
         body = await request.json()
+        logger.info('Received POST request from %s', request.remote)
         if type(body) is list or type(body) is dict:
             if type(body) is list:
                 return web.json_response(
@@ -82,6 +85,8 @@ async def api_endpoint(request: web.Request):
         else:
             return web.json_response({'error': ERRORS['UNKNOWN']})
     except json.decoder.JSONDecodeError as jde:
+        logger.exception('Received malformed JSON from %s: %s', request.remote, jde.msg)
+        logger.debug('Request headers: %s', request.headers)
         return web.json_response({
             'error': {'message': jde.msg, 'code': -1}
         })

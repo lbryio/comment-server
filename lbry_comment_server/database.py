@@ -4,7 +4,10 @@ import typing
 import re
 import nacl.hash
 import time
+import logging
 from lbry_comment_server.settings import config
+
+logger = logging.getLogger(__name__)
 
 
 def obtain_connection(filepath: str = None, row_factory: bool = True):
@@ -94,6 +97,7 @@ def create_comment(conn: sqlite3.Connection, comment: str, claim_id: str, **kwar
             )
             _insert_channel(conn, channel_name, channel_id)
         except AssertionError:
+            logger.exception('Received invalid input')
             return None
     else:
         channel_id = config['ANONYMOUS']['CHANNEL_ID']

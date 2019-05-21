@@ -3,6 +3,10 @@ import atexit
 from asyncio import coroutine
 import lbry_comment_server.database as db
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 # DatabaseWriter should be instantiated on startup
 class DatabaseWriter(object):
@@ -13,10 +17,13 @@ class DatabaseWriter(object):
             self.conn = db.obtain_connection(db_file)
             DatabaseWriter._writer = self
             atexit.register(self.cleanup)
+            logging.info('Database writer has been created at %s', repr(self))
         else:
+            logging.warning('Someone attempted to insantiate DatabaseWriter')
             raise TypeError('Database Writer already exists!')
 
     def cleanup(self):
+        logging.info('Cleaning up database writer')
         DatabaseWriter._writer = None
         self.conn.close()
 

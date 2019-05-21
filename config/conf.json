@@ -4,12 +4,16 @@
     "MAIN": "database/comments.db",
     "BACKUP": "database/comments.backup.db",
     "DEFAULT": "database/default.db",
-    "TEST": "tests/test.db"
+    "TEST": "tests/test.db",
+    "ERROR_LOG": "error.log",
+    "LOG": "server.log"
   },
   "ANONYMOUS": {
     "CHANNEL_ID": "9cb713f01bf247a0e03170b5ed00d5161340c486",
     "CHANNEL_NAME": "@Anonymous"
   },
+  "LOGGING_FORMAT": "%(asctime)s - %(name)s - %(level)s - %(message)s",
   "HOST": "localhost",
-  "PORT": 2903
+  "PORT": 2903,
+  "BACKUP_INT": 3600
 }
