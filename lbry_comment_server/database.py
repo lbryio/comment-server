@@ -1,10 +1,12 @@
-import sqlite3
-import aiosqlite
-import typing
-import re
-import nacl.hash
-import time
 import logging
+import re
+import sqlite3
+import time
+import typing
+
+import aiosqlite
+import nacl.hash
+
 from lbry_comment_server.settings import config
 
 logger = logging.getLogger(__name__)

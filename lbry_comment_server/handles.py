@@ -1,13 +1,14 @@
 import json
-import asyncio
-from aiojobs.aiohttp import atomic
-from aiohttp import web
 import logging
-from lbry_comment_server.database import obtain_connection
+
+import asyncio
+from aiohttp import web
+from aiojobs.aiohttp import atomic
+
+import lbry_comment_server.writes as writes
 from lbry_comment_server import get_claim_comments
 from lbry_comment_server import get_comments_by_id, get_comment_ids
-import lbry_comment_server.writes as writes
-
+from lbry_comment_server.database import obtain_connection
 
 logger = logging.getLogger(__name__)
 

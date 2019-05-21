@@ -1,11 +1,12 @@
-import asyncio
-from asyncio.runners import _cancel_all_tasks  # type: ignore
 import unittest
+from asyncio.runners import _cancel_all_tasks  # type: ignore
 from unittest.case import _Outcome
-import lbry_comment_server.database as db
 
-from lbry_comment_server import config
+import asyncio
+
+import lbry_comment_server.database as db
 import schema.db_helpers as schema
+from lbry_comment_server.settings import config
 
 
 class AsyncioTestCase(unittest.TestCase):

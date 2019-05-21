@@ -1,9 +1,10 @@
-import aiojobs
 import atexit
-from asyncio import coroutine
-import lbry_comment_server.database as db
-
 import logging
+
+import aiojobs
+from asyncio import coroutine
+
+import lbry_comment_server.database as db
 
 logger = logging.getLogger(__name__)
 

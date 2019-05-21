@@ -1,14 +1,14 @@
-import asyncio
-from aiohttp import web
-import aiojobs.aiohttp
 import logging
 
-import schema.db_helpers as helpers
-import lbry_comment_server.writes as writes
-from lbry_comment_server.settings import config
-from lbry_comment_server.handles import api_endpoint
-from lbry_comment_server.database import obtain_connection
+import aiojobs.aiohttp
+import asyncio
+from aiohttp import web
 
+import lbry_comment_server.writes as writes
+import schema.db_helpers as helpers
+from lbry_comment_server.database import obtain_connection
+from lbry_comment_server.handles import api_endpoint
+from lbry_comment_server.settings import config
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

@@ -1,9 +1,9 @@
 from random import randint
+
 import faker
 from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
-
 
 import lbry_comment_server.database as db
 import schema.db_helpers as schema
