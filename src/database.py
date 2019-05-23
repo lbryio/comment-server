@@ -101,12 +101,17 @@ def create_comment(conn: sqlite3.Connection, comment: str, claim_id: str, **kwar
             _insert_channel(conn, channel_name, channel_id)
         except AssertionError:
             logger.exception('Received invalid input')
-            return None
+            raise TypeError('Invalid params given to input validation')
     else:
         channel_id = config['ANONYMOUS']['CHANNEL_ID']
-    comment_id = _insert_comment(
-        conn=conn, comment=comment, claim_id=claim_id, channel_id=channel_id, **kwargs
-    )
+    try:
+        comment_id = _insert_comment(
+            conn=conn, comment=comment, claim_id=claim_id, channel_id=channel_id, **kwargs
+        )
+    except sqlite3.IntegrityError as ie:
+        logger.exception(ie)
+        return None  # silently return none
+
     curry = conn.execute(
         'SELECT * FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?', (comment_id,)
     )
@@ -186,7 +191,7 @@ async def create_comment_async(db_file: str, comment: str, claim_id: str, **kwar
             )
             await _insert_channel_async(db_file, channel_name, channel_id)
         except AssertionError:
-            return None
+            raise TypeError('Invalid parameters given to input validation')
     else:
         channel_id = config['ANONYMOUS']['CHANNEL_ID']
     comment_id = await _insert_comment_async(
