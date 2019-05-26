@@ -1,10 +1,7 @@
 import atexit
 import logging
 
-import aiojobs
-from asyncio import coroutine
-
-from src.database import obtain_connection, create_comment
+from src.database import obtain_connection
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +28,3 @@ class DatabaseWriter(object):
     @property
     def connection(self):
         return self.conn
-
-
-async def create_comment_scheduler():
-    return await aiojobs.create_scheduler(limit=1, pending_limit=0)
-
-
-async def write_comment(**comment):
-    with DatabaseWriter._writer.connection as conn:
-        return await coroutine(create_comment)(conn, **comment)

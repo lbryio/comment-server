@@ -1,10 +1,10 @@
+# cython: language_level=3
 import logging
 import re
 import sqlite3
 import time
 import typing
 
-import aiosqlite
 import nacl.hash
 
 from src.settings import config
@@ -150,61 +150,6 @@ def get_comments_by_id(conn, comment_ids: list) -> typing.Union[list, None]:
         f'SELECT * FROM COMMENTS_ON_CLAIMS WHERE comment_id IN ({placeholders})',
         tuple(comment_ids)
     )]
-
-
-async def _insert_channel_async(db_file: str, channel_name: str, channel_id: str):
-    async with aiosqlite.connect(db_file) as db:
-        await db.execute('INSERT INTO CHANNEL(ClaimId, Name) VALUES (?, ?)',
-                         (channel_id, channel_name))
-        await db.commit()
-
-
-async def _insert_comment_async(db_file: str, claim_id: str = None, comment: str = None,
-                                channel_id: str = None, signature: str = None, parent_id: str = None) -> str:
-    timestamp = time.time_ns()
-    comment_prehash = ':'.join((claim_id, comment, str(timestamp),))
-    comment_prehash = bytes(comment_prehash.encode('utf-8'))
-    comment_id = nacl.hash.sha256(comment_prehash).decode('utf-8')
-    async with aiosqlite.connect(db_file) as db:
-        await db.execute(
-            """
-            INSERT INTO COMMENT(CommentId, LbryClaimId, ChannelId, Body, 
-                                            ParentId, Signature, Timestamp) 
-            VALUES (?, ?, ?, ?, ?, ?, ?) 
-            """,
-            (comment_id, claim_id, channel_id, comment, parent_id, signature, timestamp)
-        )
-        await db.commit()
-    return comment_id
-
-
-async def create_comment_async(db_file: str, comment: str, claim_id: str, **kwargs):
-    channel_id = kwargs.pop('channel_id', '')
-    channel_name = kwargs.pop('channel_name', '')
-    if channel_id or channel_name:
-        try:
-            validate_input(
-                comment=comment,
-                claim_id=claim_id,
-                channel_id=channel_id,
-                channel_name=channel_name,
-            )
-            await _insert_channel_async(db_file, channel_name, channel_id)
-        except AssertionError:
-            raise TypeError('Invalid parameters given to input validation')
-    else:
-        channel_id = config['ANONYMOUS']['CHANNEL_ID']
-    comment_id = await _insert_comment_async(
-        db_file=db_file, comment=comment, claim_id=claim_id, channel_id=channel_id, **kwargs
-    )
-    async with aiosqlite.connect(db_file) as db:
-        db.row_factory = aiosqlite.Row
-        curs = await db.execute(
-            'SELECT * FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?', (comment_id,)
-        )
-        thing = await curs.fetchone()
-        await curs.close()
-        return dict(thing) if thing else None
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+# cython: language_level=3
 import logging
 
 import aiojobs.aiohttp
@@ -8,8 +9,9 @@ import re
 import schema.db_helpers
 from src.database import obtain_connection
 from src.handles import api_endpoint
+from src.handles import create_comment_scheduler
 from src.settings import config
-from src.writes import create_comment_scheduler, DatabaseWriter
+from src.writes import DatabaseWriter
 
 
 logger = logging.getLogger(__name__)

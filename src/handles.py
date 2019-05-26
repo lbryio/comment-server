@@ -1,14 +1,18 @@
+# cython: language_level=3
 import json
 import logging
 
 import asyncio
+import aiojobs
+from asyncio import coroutine
 from aiohttp import web
 from aiojobs.aiohttp import atomic
 
-from src.writes import write_comment
+from src.writes import DatabaseWriter
 from src.database import get_claim_comments
 from src.database import get_comments_by_id, get_comment_ids
 from src.database import obtain_connection
+from src.database import create_comment
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +40,15 @@ def handle_get_claim_comments(app, **kwargs):
 def handle_get_comments_by_id(app, **kwargs):
     with obtain_connection(app['db_path']) as conn:
         return get_comments_by_id(conn, **kwargs)
+
+
+async def create_comment_scheduler():
+    return await aiojobs.create_scheduler(limit=1, pending_limit=0)
+
+
+async def write_comment(**comment):
+    with DatabaseWriter._writer.connection as conn:
+        return await coroutine(create_comment)(conn, **comment)
 
 
 async def handle_create_comment(scheduler, **kwargs):
