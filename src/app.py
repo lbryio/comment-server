@@ -10,12 +10,14 @@ import schema.db_helpers
 from src.database import obtain_connection
 from src.handles import api_endpoint
 from src.handles import create_comment_scheduler
-from src.settings import config
+from src.settings import config_path, get_config
 from src.writes import DatabaseWriter
 
 
+config = get_config(config_path)
+
 logger = logging.getLogger(__name__)
-# logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG)
 
 formatter = logging.Formatter(config['LOGGING_FORMAT'])
 debug_handler = logging.FileHandler(config['PATH']['LOG'])
@@ -93,7 +95,7 @@ def create_app(conf, db_path='DEFAULT', **kwargs):
 
 
 def run_app():
-    appl = create_app(conf=config, db_path='TEST', close_timeout=5.0)
+    appl = create_app(conf=config, db_path='DEFAULT', close_timeout=5.0)
     try:
         asyncio.run(web.run_app(appl, access_log=logger, host=config['HOST'], port=config['PORT']))
     except asyncio.CancelledError:
