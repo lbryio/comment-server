@@ -90,28 +90,7 @@ def create_app(conf, db_path='DEFAULT', **kwargs):
     return app
 
 
-async def stop_app(runner):
-    logger.info('stopping app; running cleanup routine')
-    await runner.cleanup()
-
-
-async def run_app(app):
-    runner = None
-    try:
-        runner = web.AppRunner(app)
-        await runner.setup()
-        site = web.TCPSite(runner, config['HOST'], config['PORT'])
-        await site.start()
-        while True:
-
-            await asyncio.sleep(2**63)
-    except asyncio.CancelledError as cerr:
-        pass
-    finally:
-        await stop_app(runner)
-
-
-def __run_app():
+def run_app():
     appl = create_app(conf=config, db_path='TEST', close_timeout=5.0)
     try:
         asyncio.run(web.run_app(appl, access_log=logger, host=config['HOST'], port=config['PORT']))
@@ -119,7 +98,3 @@ def __run_app():
         pass
     except ValueError:
         pass
-
-
-if __name__ == '__main__':
-    __run_app()
