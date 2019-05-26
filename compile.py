@@ -14,5 +14,6 @@ ext_modules = [
 setup(
     name="comment_server",
     cmdclass={"build_ext": build_ext},
-    ext_modules=ext_modules
+    ext_modules=ext_modules,
+    compiler_directives={'language_level': '3'}
 )
