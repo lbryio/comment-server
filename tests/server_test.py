@@ -161,7 +161,6 @@ def fake_lbryusername():
     return '@' + fake.user_name()
 
 
-
 def jsonrpc_post(url, method, **params):
     json_body = {
         'jsonrpc': '2.0',
@@ -204,24 +203,28 @@ class ListCommentsTest(unittest.TestCase):
         for comment in cls.comment_list:
             comment['claim_id'] = cls.claim_id
         cls.comment_ids = [cls.post_comment(**comm).json()['result']['comment_id']
-                               for comm in cls.comment_list]
+                           for comm in cls.comment_list]
 
     def testListComments(self):
         response_one = jsonrpc_post(self.url, 'get_claim_comments', page_size=20,
-                                page=1, top_level=1, claim_id=self.claim_id).json()
+                                    page=1, top_level=1, claim_id=self.claim_id).json()
         self.assertIsNotNone(response_one)
         self.assertIn('result', response_one)
-        response_one: list = response_one['result']
-        self.assertIs(type(response_one), list)
-        self.assertEquals(len(response_one), 20)
+        response_one: dict = response_one['result']
+        self.assertIs(type(response_one), dict)
+        self.assertEquals(response_one['page_size'], 20)
+        self.assertIn('items', response_one)
+        self.assertEqual(response_one['total_pages'], 2)
         response = jsonrpc_post(self.url, 'get_claim_comments', page_size=20,
                                 page=2, top_level=1, claim_id=self.claim_id).json()
         self.assertIsNotNone(response)
         self.assertIn('result', response)
-        response: list = response['result']
-        self.assertIs(type(response), list)
-        self.assertEquals(len(response), 3)
-        result = response + response_one
+        response: dict = response['result']
+        self.assertIs(response['items'], list)
+        self.assertEquals(len(response['items']), 3)
+        self.assertEqual(response['total_items'], response_one['total_items'])
+        self.assertEqual(response['total_pages'], 2)
+        result: list = response['items'] + response_one['items']
         for comment in result:
             self.assertIsNotNone(comment)
             self.assertIn('comment_id', comment)
