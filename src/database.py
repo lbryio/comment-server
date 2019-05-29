@@ -1,9 +1,9 @@
-# cython: language_level=3
 import logging
 import re
 import sqlite3
 import time
 import typing
+import math
 
 import nacl.hash
 
@@ -22,28 +22,58 @@ def obtain_connection(filepath: str = None, row_factory: bool = True):
 def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str = None,
                        page: int = 1, page_size: int = 50, top_level=False):
     if top_level:
-        return [dict(row) for row in conn.execute(
+        results = [dict(row) for row in conn.execute(
             """ SELECT * 
                 FROM COMMENTS_ON_CLAIMS 
                 WHERE claim_id LIKE ? AND parent_id IS NULL
                 LIMIT ? OFFSET ? """,
             (claim_id, page_size, page_size*(page - 1))
         )]
+        count = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM COMMENTS_ON_CLAIMS
+            WHERE claim_id LIKE ? AND parent_id IS NULL
+            """, (claim_id, )
+        )
     elif parent_id is None:
-        return [dict(row) for row in conn.execute(
+        results = [dict(row) for row in conn.execute(
             """ SELECT * 
-                FROM COMMENTS_ON_CLAIMS WHERE claim_id LIKE ? 
+                FROM COMMENTS_ON_CLAIMS 
+                WHERE claim_id LIKE ? 
                 LIMIT ? OFFSET ? """,
             (claim_id, page_size, page_size*(page - 1))
         )]
+        count = conn.execute(
+            """
+                SELECT COUNT(*) 
+                FROM COMMENTS_ON_CLAIMS 
+                WHERE claim_id LIKE ? 
+            """, (claim_id,)
+        )
     else:
-        return [dict(row) for row in conn.execute(
+        results = [dict(row) for row in conn.execute(
             """ SELECT *
                 FROM COMMENTS_ON_CLAIMS 
                 WHERE claim_id LIKE ? AND parent_id = ?
                 LIMIT ? OFFSET ? """,
             (claim_id, parent_id, page_size, page_size*(page - 1))
         )]
+        count = conn.execute(
+            """
+                SELECT COUNT(*) 
+                FROM COMMENTS_ON_CLAIMS 
+                WHERE claim_id LIKE ? AND parent_id = ?
+            """, (claim_id, parent_id)
+        )
+    count = tuple(count.fetchone())[0]
+    return {
+        'items': results,
+        'page': page,
+        'page_size': page_size,
+        'total_pages': math.ceil(count/page_size),
+        'total_items': count
+    }
 
 
 def validate_input(**kwargs):

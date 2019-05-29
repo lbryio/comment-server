@@ -5,7 +5,7 @@ from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
 
-from src.database import get_comments_by_id, create_comment, get_comment_ids, create_comment_async, \
+from src.database import get_comments_by_id, create_comment, get_comment_ids, \
     get_claim_comments
 from schema.db_helpers import setup_database, teardown_database
 from src.settings import config
@@ -201,10 +201,13 @@ class ListDatabaseTest(DatabaseTestCase):
             with self.subTest(claim_id=claim_id):
                 comments = get_claim_comments(self.conn, claim_id)
                 self.assertIsNotNone(comments)
-                self.assertLessEqual(len(comments), 50)
+                self.assertGreater(comments['page_size'], 0)
                 top_comments = get_claim_comments(self.conn, claim_id, top_level=True, page=1, page_size=50)
                 self.assertIsNotNone(top_comments)
-                self.assertLessEqual(len(top_comments), 50)
+                self.assertEqual(top_comments['page_size'], 50)
+                self.assertEqual(top_comments['page'], 1)
+                self.assertGreaterEqual(top_comments['total_pages'], 0)
+                self.assertGreaterEqual(top_comments['total_items'], 0)
                 comment_ids = get_comment_ids(self.conn, claim_id, page_size=50, page=1)
                 with self.subTest(comment_ids=comment_ids):
                     self.assertIsNotNone(comment_ids)
@@ -212,154 +215,6 @@ class ListDatabaseTest(DatabaseTestCase):
                     matching_comments = get_comments_by_id(self.conn, comment_ids)
                     self.assertIsNotNone(matching_comments)
                     self.assertEqual(len(matching_comments), len(comment_ids))
-
-
-class AsyncWriteTest(AsyncioTestCase):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.db_path = config['PATH']['TEST']
-        self.claimId = '529357c3422c6046d3fec76be2358004ba22e340'
-
-    async def asyncSetUp(self):
-        await super().asyncSetUp()
-        setup_database(self.db_path)
-
-    async def asyncTearDown(self):
-        await super().asyncTearDown()
-        teardown_database(self.db_path)
-
-    async def test01NamedComments(self):
-        comment = await create_comment_async(
-            self.db_path,
-            claim_id=self.claimId,
-            comment='This is a named comment',
-            channel_name='@username',
-            channel_id='529357c3422c6046d3fec76be2358004ba22abcd',
-        )
-        self.assertIsNotNone(comment)
-        self.assertIsNone(comment['parent_id'])
-        previous_id = comment['comment_id']
-        reply = await create_comment_async(
-            self.db_path,
-            claim_id=self.claimId,
-            comment='This is a named response',
-            channel_name='@another_username',
-            channel_id='529357c3422c6046d3fec76be2358004ba224bcd',
-            parent_id=previous_id
-        )
-        self.assertIsNotNone(reply)
-        self.assertEqual(reply['parent_id'], comment['comment_id'])
-        self.assertEqual(reply['claim_id'], comment['claim_id'])
-
-    async def test02AnonymousComments(self):
-        comment = await create_comment_async(
-            self.db_path,
-            claim_id=self.claimId,
-            comment='This is an ANONYMOUS comment'
-        )
-        self.assertIsNotNone(comment)
-        self.assertIsNone(comment['parent_id'])
-        previous_id = comment['comment_id']
-        reply = await create_comment_async(
-            self.db_path,
-            claim_id=self.claimId,
-            comment='This is an unnamed response',
-            parent_id=previous_id
-        )
-        self.assertIsNotNone(reply)
-        self.assertEqual(reply['parent_id'], comment['comment_id'])
-        self.assertEqual(reply['claim_id'], comment['claim_id'])
-
-    async def test03SignedComments(self):
-        comment = await create_comment_async(
-            self.db_path,
-            claim_id=self.claimId,
-            comment='I like big butts and i cannot lie',
-            channel_name='@sirmixalot',
-            channel_id='529357c3422c6046d3fec76be2358005ba22abcd',
-            signature='siggy'
-        )
-        self.assertIsNotNone(comment)
-        self.assertIsNone(comment['parent_id'])
-        previous_id = comment['comment_id']
-        reply = await create_comment_async(
-            self.db_path,
-            claim_id=self.claimId,
-            comment='This is a LBRY verified response',
-            channel_name='@LBRY',
-            channel_id='529357c3422c6046d3fec76be2358001ba224bcd',
-            parent_id=previous_id,
-            signature='Cursive Font Goes Here'
-        )
-        self.assertIsNotNone(reply)
-        self.assertEqual(reply['parent_id'], comment['comment_id'])
-        self.assertEqual(reply['claim_id'], comment['claim_id'])
-
-    async def test04UsernameVariations(self):
-        invalid_comment = await create_comment_async(
-            self.db_path,
-            claim_id=self.claimId,
-            channel_name='$#(@#$@#$',
-            channel_id='529357c3422c6046d3fec76be2358001ba224b23',
-            comment='this is an invalid username'
-        )
-        self.assertIsNone(invalid_comment)
-        valid_username = await create_comment_async(
-            self.db_path,
-            claim_id=self.claimId,
-            channel_name='@' + 'a'*255,
-            channel_id='529357c3422c6046d3fec76be2358001ba224b23',
-            comment='this is a valid username'
-        )
-        self.assertIsNotNone(valid_username)
-
-        lengthy_username = await create_comment_async(
-            self.db_path,
-            claim_id=self.claimId,
-            channel_name='@' + 'a'*256,
-            channel_id='529357c3422c6046d3fec76be2358001ba224b23',
-            comment='this username is too long'
-        )
-        self.assertIsNone(lengthy_username)
-        comment = await create_comment_async(
-            self.db_path,
-            claim_id=self.claimId,
-            channel_name='',
-            channel_id='529357c3422c6046d3fec76be2358001ba224b23',
-            comment='this username should not default to ANONYMOUS'
-        )
-        self.assertIsNone(comment)
-        short_username = await create_comment_async(
-            self.db_path,
-            claim_id=self.claimId,
-            channel_name='@',
-            channel_id='529357c3422c6046d3fec76be2358001ba224b23',
-            comment='this username is too short'
-        )
-        self.assertIsNone(short_username)
-
-    async def test06GenerateAndListComments(self):
-        top_comments, claim_ids = generate_top_comments()
-        total, success = 0, 0
-        for _, comments in top_comments.items():
-            for i, comment in enumerate(comments):
-                result = await create_comment_async(self.db_path, **comment)
-                if result:
-                    success += 1
-                comments[i] = result
-                del comment
-            total += len(comments)
-        self.assertEqual(total, success)
-        self.assertGreater(total, 0)
-        success, total = 0, 0
-        for reply in generate_replies(top_comments):
-            inserted_reply = await create_comment_async(self.db_path, **reply)
-            if inserted_reply:
-                success += 1
-            total += 1
-
-        self.assertEqual(success, total)
-        self.assertGreater(success, 0)
 
 
 def generate_replies(top_comments):
