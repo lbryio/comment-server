@@ -1,10 +1,11 @@
 # cython: language_level=3
 import logging
+import pathlib
+import re
 
 import aiojobs.aiohttp
 import asyncio
 from aiohttp import web
-import re
 
 import schema.db_helpers
 from src.database import obtain_connection
@@ -12,7 +13,6 @@ from src.handles import api_endpoint
 from src.handles import create_comment_scheduler
 from src.settings import config_path, get_config
 from src.writes import DatabaseWriter
-
 
 config = get_config(config_path)
 
@@ -38,8 +38,11 @@ logger.addHandler(stdout_handler)
 
 
 async def setup_db_schema(app):
-    logger.info('Setting up schema in %s', app['db_path'])
-    schema.db_helpers.setup_database(app['db_path'])
+    if not pathlib.Path(app['db_path']).exists():
+        logger.info('Setting up schema in %s', app['db_path'])
+        schema.db_helpers.setup_database(app['db_path'])
+    else:
+        logger.info('Database already exists in %s, skipping setup', app['db_path'])
 
 
 async def close_comment_scheduler(app):
