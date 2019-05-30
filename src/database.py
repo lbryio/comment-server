@@ -3,8 +3,8 @@ import re
 import sqlite3
 import time
 import typing
-import math
 
+import math
 import nacl.hash
 
 from src.settings import config
@@ -100,7 +100,7 @@ def _insert_channel(conn: sqlite3.Connection, channel_name: str, channel_id: str
 
 def _insert_comment(conn: sqlite3.Connection, claim_id: str = None, comment: str = None,
                     channel_id: str = None, signature: str = None, parent_id: str = None) -> str:
-    timestamp = time.time_ns()
+    timestamp = int(time.time())
     comment_prehash = ':'.join((claim_id, comment, str(timestamp),))
     comment_prehash = bytes(comment_prehash.encode('utf-8'))
     comment_id = nacl.hash.sha256(comment_prehash).decode('utf-8')
