@@ -38,7 +38,7 @@ CREATE INDEX IF NOT EXISTS COMMENT_CLAIM_INDEX ON COMMENT (LbryClaimId);
 
 -- VIEWS
 -- DROP VIEW IF EXISTS COMMENTS_ON_CLAIMS;
-CREATE VIEW IF NOT EXISTS COMMENTS_ON_CLAIMS (comment_id, claim_id, timestamp, channel_name, channel_id, channel_uri, signature, parent_id, comment) AS
+CREATE VIEW IF NOT EXISTS COMMENTS_ON_CLAIMS (comment_id, claim_id, timestamp, channel_name, channel_id, channel_url, signature, parent_id, comment) AS
     SELECT C.CommentId, C.LbryClaimId, C.Timestamp, CHAN.Name, CHAN.ClaimId, 'lbry://' || CHAN.Name || '#' || CHAN.ClaimId, C.Signature, C.ParentId, C.Body
     FROM CHANNEL AS CHAN
     INNER JOIN COMMENT C on CHAN.ClaimId = C.ChannelId
