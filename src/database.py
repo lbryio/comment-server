@@ -80,12 +80,14 @@ def validate_input(**kwargs):
         '[a-z0-9]{40}:([a-z0-9]{40})?',
         kwargs['claim_id'] + ':' + kwargs.get('channel_id', '')
     )
-    if 'channel_name' in kwargs:
+    if 'channel_name' in kwargs or 'channel_id' in kwargs:
+        assert 'channel_id' in kwargs and 'channel_name' in kwargs
         assert re.fullmatch(
             '^@(?:(?![\x00-\x08\x0b\x0c\x0e-\x1f\x23-\x26'
             '\x2f\x3a\x3d\x3f-\x40\uFFFE-\U0000FFFF]).){1,255}$',
-            kwargs['channel_name']
+            kwargs.get('channel_name', '')
         )
+        assert re.fullmatch('[a-z0-9]{40}', kwargs.get('channel_id', ''))
 
 
 def _insert_channel(conn: sqlite3.Connection, channel_name: str, channel_id: str):
