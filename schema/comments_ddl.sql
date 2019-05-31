@@ -37,11 +37,11 @@ CREATE INDEX IF NOT EXISTS COMMENT_CLAIM_INDEX ON COMMENT (LbryClaimId);
 
 
 -- VIEWS
--- DROP VIEW IF EXISTS COMMENTS_ON_CLAIMS;
+DROP VIEW IF EXISTS COMMENTS_ON_CLAIMS;
 CREATE VIEW IF NOT EXISTS COMMENTS_ON_CLAIMS (comment_id, claim_id, timestamp, channel_name, channel_id, channel_url, signature, parent_id, comment) AS
     SELECT C.CommentId, C.LbryClaimId, C.Timestamp, CHAN.Name, CHAN.ClaimId, 'lbry://' || CHAN.Name || '#' || CHAN.ClaimId, C.Signature, C.ParentId, C.Body
-    FROM CHANNEL AS CHAN
-    INNER JOIN COMMENT C on CHAN.ClaimId = C.ChannelId
+    FROM COMMENT AS C
+    LEFT OUTER JOIN CHANNEL CHAN on C.ChannelId = CHAN.ClaimId
     ORDER BY C.Timestamp;
 
 
@@ -56,5 +56,5 @@ CREATE VIEW IF NOT EXISTS COMMENT_REPLIES (Author, CommentBody, ParentAuthor, Pa
         ORDER BY OG.Timestamp;
 
 -- this is the default channel for anyone who wants to publish anonymously
-INSERT INTO CHANNEL
-VALUES ('9cb713f01bf247a0e03170b5ed00d5161340c486', '@Anonymous');
+-- INSERT INTO CHANNEL
+-- VALUES ('9cb713f01bf247a0e03170b5ed00d5161340c486', '@Anonymous');

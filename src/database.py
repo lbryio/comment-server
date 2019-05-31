@@ -7,8 +7,6 @@ import typing
 import math
 import nacl.hash
 
-from src.settings import config
-
 logger = logging.getLogger(__name__)
 
 
@@ -133,7 +131,7 @@ def create_comment(conn: sqlite3.Connection, comment: str, claim_id: str, **kwar
             logger.exception('Received invalid input')
             raise TypeError('Invalid params given to input validation')
     else:
-        channel_id = config['ANONYMOUS']['CHANNEL_ID']
+        channel_id = None
     try:
         comment_id = _insert_comment(
             conn=conn, comment=comment, claim_id=claim_id, channel_id=channel_id, **kwargs
