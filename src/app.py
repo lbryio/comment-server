@@ -63,6 +63,7 @@ async def create_database_backup(app):
 
 
 async def start_background_tasks(app: web.Application):
+    app['reader'] = obtain_connection(app['db_path'], True)
     app['waitful_backup'] = app.loop.create_task(create_database_backup(app))
     app['comment_scheduler'] = await create_comment_scheduler()
     app['writer'] = DatabaseWriter(app['db_path'])
@@ -89,7 +90,6 @@ def create_app(conf, db_path='DEFAULT', **kwargs):
     insert_to_config(app, conf, db_path)
     app.on_startup.append(setup_db_schema)
     app.on_startup.append(start_background_tasks)
-    app['reader'] = obtain_connection(app['db_path'], True)
     app.on_shutdown.append(close_comment_scheduler)
     app.on_shutdown.append(cleanup_background_tasks)
     aiojobs.aiohttp.setup(app, **kwargs)
