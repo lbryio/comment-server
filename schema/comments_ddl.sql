@@ -42,7 +42,7 @@ CREATE VIEW IF NOT EXISTS COMMENTS_ON_CLAIMS (comment_id, claim_id, timestamp, c
     SELECT C.CommentId, C.LbryClaimId, C.Timestamp, CHAN.Name, CHAN.ClaimId, 'lbry://' || CHAN.Name || '#' || CHAN.ClaimId, C.Signature, C.ParentId, C.Body
     FROM COMMENT AS C
     LEFT OUTER JOIN CHANNEL CHAN on C.ChannelId = CHAN.ClaimId
-    ORDER BY C.Timestamp;
+    ORDER BY C.Timestamp DESC;
 
 
 
