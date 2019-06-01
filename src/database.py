@@ -10,6 +10,10 @@ import nacl.hash
 logger = logging.getLogger(__name__)
 
 
+def clean(thing: dict) -> dict:
+    return {k: v for k, v in thing.items() if v}
+
+
 def obtain_connection(filepath: str = None, row_factory: bool = True):
     connection = sqlite3.connect(filepath)
     if row_factory:
@@ -20,7 +24,7 @@ def obtain_connection(filepath: str = None, row_factory: bool = True):
 def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str = None,
                        page: int = 1, page_size: int = 50, top_level=False):
     if top_level:
-        results = [dict(row) for row in conn.execute(
+        results = [clean(dict(row)) for row in conn.execute(
             """ SELECT * 
                 FROM COMMENTS_ON_CLAIMS 
                 WHERE claim_id LIKE ? AND parent_id IS NULL
@@ -35,7 +39,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
             """, (claim_id, )
         )
     elif parent_id is None:
-        results = [dict(row) for row in conn.execute(
+        results = [clean(dict(row)) for row in conn.execute(
             """ SELECT * 
                 FROM COMMENTS_ON_CLAIMS 
                 WHERE claim_id LIKE ? 
@@ -50,7 +54,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
             """, (claim_id,)
         )
     else:
-        results = [dict(row) for row in conn.execute(
+        results = [clean(dict(row)) for row in conn.execute(
             """ SELECT *
                 FROM COMMENTS_ON_CLAIMS 
                 WHERE claim_id LIKE ? AND parent_id = ?
@@ -146,7 +150,7 @@ def create_comment(conn: sqlite3.Connection, comment: str, claim_id: str, **kwar
         'SELECT * FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?', (comment_id,)
     )
     thing = curry.fetchone()
-    return dict(thing) if thing else None
+    return clean(dict(thing)) if thing else None
 
 
 def get_comment_ids(conn: sqlite3.Connection, claim_id: str, parent_id: str = None, page=1, page_size=50):
@@ -176,7 +180,7 @@ def get_comments_by_id(conn, comment_ids: list) -> typing.Union[list, None]:
     """ Returns a list containing the comment data associated with each ID within the list"""
     # format the input, under the assumption that the
     placeholders = ', '.join('?' for _ in comment_ids)
-    return [dict(row) for row in conn.execute(
+    return [clean(dict(row)) for row in conn.execute(
         f'SELECT * FROM COMMENTS_ON_CLAIMS WHERE comment_id IN ({placeholders})',
         tuple(comment_ids)
     )]
