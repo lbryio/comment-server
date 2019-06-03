@@ -25,7 +25,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
                        page: int = 1, page_size: int = 50, top_level=False):
     if top_level:
         results = [clean(dict(row)) for row in conn.execute(
-            """ SELECT * 
+            """ SELECT comment, comment_id, channel_name, channel_id, channel_url, timestamp, signature, parent_id
                 FROM COMMENTS_ON_CLAIMS 
                 WHERE claim_id LIKE ? AND parent_id IS NULL
                 LIMIT ? OFFSET ? """,
@@ -40,7 +40,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
         )
     elif parent_id is None:
         results = [clean(dict(row)) for row in conn.execute(
-            """ SELECT * 
+            """ SELECT comment, comment_id, channel_name, channel_id, channel_url, timestamp, signature, parent_id
                 FROM COMMENTS_ON_CLAIMS 
                 WHERE claim_id LIKE ? 
                 LIMIT ? OFFSET ? """,
@@ -55,7 +55,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
         )
     else:
         results = [clean(dict(row)) for row in conn.execute(
-            """ SELECT *
+            """ SELECT comment, comment_id, channel_name, channel_id, channel_url, timestamp, signature, parent_id
                 FROM COMMENTS_ON_CLAIMS 
                 WHERE claim_id LIKE ? AND parent_id = ?
                 LIMIT ? OFFSET ? """,
@@ -144,10 +144,14 @@ def create_comment(conn: sqlite3.Connection, comment: str, claim_id: str, **kwar
         )
     except sqlite3.IntegrityError as ie:
         logger.exception(ie)
-        return None  # silently return none
+        return None
 
     curry = conn.execute(
-        'SELECT * FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?', (comment_id,)
+        """
+        SELECT comment, comment_id, channel_name, channel_id, channel_url, timestamp, signature, parent_id
+        FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?
+        """,
+        (comment_id,)
     )
     thing = curry.fetchone()
     return clean(dict(thing)) if thing else None
