@@ -1,30 +1,44 @@
-# LBRY Comment Server v2
+# LBRY Comment Server
 
-This is a rewrite & update of the server 
-[written by myself and Grayson Burton here](https://github.com/ocornoc/lbry-comments)
 
-### Install & Setup
+## Installation
 
-Clone the repo and install a virtual environement: 
+Firstly you'll need to install and run the `lbrynet` daemon,
+the details of which can be found [here](https://github.com/osilkin98/lbryio/lbry).
 
+Installing the server:
 ```bash
-# clone the repo
+
 $ git clone https://github.com/osilkin98/comment-server
+$ cd comment-server
 
-# create a virtual environment in any (current) version of python3.X
+# create a virtual environment
 $ virtualenv --python=python3 venv
-$ source venv/bin/activate 
 
-# install the dependencies
+# Enter the virtual environment
+$ source venv/bin/activate
+
+# install the library dependencies
 (venv) $ pip install -r requirements.txt
 ```
 
-### Running the server
+## Usage
 
-Just run:
-`(venv) $ python -m src.main.py`
-and it should run automatically.
 
+First, make sure that the LBRY API server is running, 
+to do so you can run the following:
+ 
+ ```bash
+ (venv) $ curl  --data '{ "method": "status"}' http://localhost:5279/ | grep is_running
+ 
+ # Or from the lbrynet virtual environment:
+ (lbry-venv) $ lbrynet status | grep is_running
+ ```
+
+Then to start the server, simply run:
+```bash
+(venv) $ python -m main &  
+```
 
 ## Schema
 ![schema](schema.png)
@@ -32,18 +46,16 @@ and it should run automatically.
 
 ## About
 A lot of the design is more or less the same with the original,
-except this version focuses less on performance and more on scalability. 
+except this version focuses less on performance and more on scalability.
 
-Rewritten with python because it's easier to adjust 
-and maintain. Instead of doing any multithreading, 
-this implementation just delegates a single 
-database connection for write operations. 
+Rewritten with python because it's easier to adjust
+and maintain. Instead of doing any multithreading,
+this implementation just delegates a single
+database connection for write operations.
 
-The server was originally implemented with `aiohttp` 
+The server was originally implemented with `aiohttp`
 and uses `aiojobs` for scheduling write operations.
-As pointed out by several people, Python is a dinosaur 
-in comparison to SQLite's execution speed, 
-so there is no sensibility in multi-threading from the 
-perspective of the server code itself. 
-
-
+As pointed out by several people, Python is a dinosaur
+in comparison to SQLite's execution speed,
+so there is no sensibility in multi-threading from the
+perspective of the server code itself.
