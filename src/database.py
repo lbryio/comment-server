@@ -27,7 +27,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
         if top_level:
             results = [clean(dict(row)) for row in conn.execute(
                 """ SELECT comment, comment_id, channel_name, channel_id, 
-                        channel_url, timestamp, signature, parent_id
+                        channel_url, timestamp, signature, signing_ts, parent_id
                     FROM COMMENTS_ON_CLAIMS 
                     WHERE claim_id LIKE ? AND parent_id IS NULL
                     LIMIT ? OFFSET ? """,
@@ -43,7 +43,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
         elif parent_id is None:
             results = [clean(dict(row)) for row in conn.execute(
                 """ SELECT comment, comment_id, channel_name, channel_id, 
-                        channel_url, timestamp, signature, parent_id
+                        channel_url, timestamp, signature, signing_ts, parent_id
                     FROM COMMENTS_ON_CLAIMS 
                     WHERE claim_id LIKE ? 
                     LIMIT ? OFFSET ? """,
@@ -59,7 +59,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
         else:
             results = [clean(dict(row)) for row in conn.execute(
                 """ SELECT comment, comment_id, channel_name, channel_id, 
-                        channel_url, timestamp, signature, parent_id
+                        channel_url, timestamp, signature, signing_ts, parent_id
                     FROM COMMENTS_ON_CLAIMS 
                     WHERE claim_id LIKE ? AND parent_id = ?
                     LIMIT ? OFFSET ? """,
@@ -106,7 +106,7 @@ def _insert_channel(conn: sqlite3.Connection, channel_name: str, channel_id: str
         )
 
 
-def insert_channel_or_error(conn: sqlite3.Connection, channel_name: str, channel_id):
+def insert_channel_or_error(conn: sqlite3.Connection, channel_name: str, channel_id: str):
     try:
         validate_channel(channel_id, channel_name)
         _insert_channel(conn, channel_name, channel_id)
@@ -116,7 +116,8 @@ def insert_channel_or_error(conn: sqlite3.Connection, channel_name: str, channel
 
 
 def _insert_comment(conn: sqlite3.Connection, claim_id: str = None, comment: str = None,
-                    channel_id: str = None, signature: str = None, parent_id: str = None) -> str:
+                    channel_id: str = None, signature: str = None, signing_ts: str = None,
+                    parent_id: str = None) -> str:
     timestamp = int(time.time())
     prehash = ':'.join((claim_id, comment, str(timestamp),))
     prehash = bytes(prehash.encode('utf-8'))
@@ -124,10 +125,10 @@ def _insert_comment(conn: sqlite3.Connection, claim_id: str = None, comment: str
     with conn:
         conn.execute(
             """
-            INSERT INTO COMMENT(CommentId, LbryClaimId, ChannelId, Body, ParentId, Signature, Timestamp) 
-            VALUES (?, ?, ?, ?, ?, ?, ?) 
+            INSERT INTO COMMENT(CommentId, LbryClaimId, ChannelId, Body, ParentId, Timestamp, Signature, SigningTs) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
             """,
-            (comment_id, claim_id, channel_id, comment, parent_id, signature, timestamp)
+            (comment_id, claim_id, channel_id, comment, parent_id, timestamp, signature, signing_ts)
         )
     logger.debug('Inserted Comment into DB, `comment_id`: %s', comment_id)
     return comment_id
@@ -137,7 +138,7 @@ def get_comment_or_none(conn: sqlite3.Connection, comment_id: str) -> dict:
     with conn:
         curry = conn.execute(
             """
-            SELECT comment, comment_id, channel_name, channel_id, channel_url, timestamp, signature, parent_id
+            SELECT comment, comment_id, channel_name, channel_id, channel_url, timestamp, signature, signing_ts, parent_id
             FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?
             """,
             (comment_id,)
@@ -146,12 +147,15 @@ def get_comment_or_none(conn: sqlite3.Connection, comment_id: str) -> dict:
         return clean(dict(thing)) if thing else None
 
 
-def create_comment(conn: sqlite3.Connection, comment: str, claim_id: str,
-                   channel_id: str = None, channel_name: str = None,
-                   signature: str = None, parent_id: str = None):
-    if channel_id or channel_name or signature:
-        # do nothing with signature for now
-        insert_channel_or_error(conn, channel_name=channel_name, channel_id=channel_id)
+def validate_signature(*args, **kwargs):
+    pass
+
+
+def create_comment(conn: sqlite3.Connection, comment: str, claim_id: str, channel_id: str = None,
+                   channel_name: str = None, signature: str = None, signing_ts: str = None, parent_id: str = None):
+    if channel_id or channel_name or signature or signing_ts:
+        validate_signature(signature, signing_ts, comment, channel_name, channel_id)
+        insert_channel_or_error(conn, channel_name, channel_id)
     try:
         comment_id = _insert_comment(
             conn=conn, comment=comment, claim_id=claim_id, channel_id=channel_id,

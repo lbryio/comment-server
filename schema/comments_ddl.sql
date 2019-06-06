@@ -22,10 +22,13 @@ CREATE TABLE IF NOT EXISTS COMMENT (
         ON UPDATE CASCADE ON DELETE NO ACTION  -- setting null implies comment is top level
 );
 
+ALTER TABLE COMMENT ADD COLUMN SigningTs TEXT DEFAULT NULL;
+
 -- DROP TABLE IF EXISTS CHANNEL;
 CREATE TABLE IF NOT EXISTS CHANNEL(
     ClaimId     TEXT    NOT NULL,
     Name        TEXT    NOT NULL,
+    PublicKey   TEXT    NOT NULL,
     CONSTRAINT CHANNEL_PK PRIMARY KEY (ClaimId)
         ON CONFLICT IGNORE
 );
@@ -38,8 +41,8 @@ CREATE INDEX IF NOT EXISTS COMMENT_CLAIM_INDEX ON COMMENT (LbryClaimId);
 
 -- VIEWS
 DROP VIEW IF EXISTS COMMENTS_ON_CLAIMS;
-CREATE VIEW IF NOT EXISTS COMMENTS_ON_CLAIMS (comment_id, claim_id, timestamp, channel_name, channel_id, channel_url, signature, parent_id, comment) AS
-    SELECT C.CommentId, C.LbryClaimId, C.Timestamp, CHAN.Name, CHAN.ClaimId, 'lbry://' || CHAN.Name || '#' || CHAN.ClaimId, C.Signature, C.ParentId, C.Body
+CREATE VIEW IF NOT EXISTS COMMENTS_ON_CLAIMS (comment_id, claim_id, timestamp, channel_name, channel_id, channel_url, signature, signing_ts, parent_id, comment) AS
+    SELECT C.CommentId, C.LbryClaimId, C.Timestamp, CHAN.Name, CHAN.ClaimId, 'lbry://' || CHAN.Name || '#' || CHAN.ClaimId, C.Signature, C.SigningTs, C.ParentId, C.Body
     FROM COMMENT AS C
     LEFT OUTER JOIN CHANNEL CHAN on C.ChannelId = CHAN.ClaimId
     ORDER BY C.Timestamp DESC;
