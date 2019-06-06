@@ -8,11 +8,11 @@ from aiohttp import web
 from aiojobs.aiohttp import atomic
 from asyncio import coroutine
 
-from src.database import create_comment
+from src.database import DatabaseWriter
 from src.database import get_claim_comments
 from src.database import get_comments_by_id, get_comment_ids
 from src.database import obtain_connection
-from src.writes import DatabaseWriter
+from src.writes import create_comment
 
 logger = logging.getLogger(__name__)
 

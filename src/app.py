@@ -8,11 +8,10 @@ import asyncio
 from aiohttp import web
 
 import schema.db_helpers
-from src.database import obtain_connection
+from src.database import obtain_connection, DatabaseWriter
 from src.handles import api_endpoint
 from src.handles import create_comment_scheduler
 from src.settings import config_path, get_config
-from src.writes import DatabaseWriter
 
 config = get_config(config_path)
 
