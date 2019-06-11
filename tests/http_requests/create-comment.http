@@ -12,10 +12,11 @@ Content-Type: application/json
   "id": null,
   "method": "create_comment",
   "params": {
-    "comment": "this comment is persistent",
+    "comment": "POP SECRET",
     "claim_id": "9cb713f01bf247a0e03170b5ed00d5161340c486",
     "channel_name": "@dogeworld",
-    "channel_id": "9cb713f01bf247a0e03170b5ed00d5161340c486"
+    "channel_id": "9cb713f01bf247a0e03170b5ed00d5161340c486",
+    "signing_ts": "1234567"
   }
 }
 

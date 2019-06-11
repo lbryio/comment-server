@@ -12,7 +12,7 @@ def validate_channel(channel_id: str, channel_name: str):
     assert re.fullmatch('[a-z0-9]{40}', channel_id)
 
 
-def validate_input(comment: str, claim_id: str, **kwargs):
+def validate_base_comment(comment: str, claim_id: str, **kwargs):
     assert 0 < len(comment) <= 2000
     assert re.fullmatch('[a-z0-9]{40}', claim_id)
 
