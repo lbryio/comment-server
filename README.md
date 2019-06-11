@@ -3,9 +3,6 @@
 
 ## Installation
 
-Firstly you'll need to install and run the `lbrynet` daemon,
-the details of which can be found [here](https://github.com/osilkin98/lbryio/lbry).
-
 Installing the server:
 ```bash
 
@@ -23,20 +20,12 @@ $ source venv/bin/activate
 ```
 
 ## Usage
-
-
-First, make sure that the LBRY API server is running, 
-to do so you can run the following:
- 
- ```bash
- (venv) $ curl  --data '{ "method": "status"}' http://localhost:5279/ | grep is_running
- 
- # Or from the lbrynet virtual environment:
- (lbry-venv) $ lbrynet status | grep is_running
- ```
-
-Then to start the server, simply run:
+To start the server, simply run:
 ```bash
+# to enter server's venv
+$ source venv/bin/activate
+
+# to actually run server
 (venv) $ python -m main &  
 ```
 
