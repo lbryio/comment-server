@@ -2,8 +2,10 @@ import logging
 import sqlite3
 
 from src.database import get_comment_or_none
-from src.database import insert_comment, insert_channel
-from src.misc import validate_channel, validate_signature
+from src.database import insert_comment
+from src.database import insert_channel
+from src.misc import validate_channel
+from src.misc import validate_signature
 
 logger = logging.getLogger(__name__)
 

@@ -75,6 +75,7 @@ class TestCommentCreation(DatabaseTestCase):
             signing_ts='asdasd'
         )
         self.assertIsNotNone(comment)
+        self.assertIn('signing_ts', comment)
         previous_id = comment['comment_id']
         reply = create_comment(
             conn=self.conn,
@@ -88,6 +89,7 @@ class TestCommentCreation(DatabaseTestCase):
         )
         self.assertIsNotNone(reply)
         self.assertEqual(reply['parent_id'], comment['comment_id'])
+        self.assertIn('signing_ts', reply)
 
     def test04UsernameVariations(self):
         self.assertRaises(
