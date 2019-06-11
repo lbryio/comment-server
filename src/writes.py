@@ -16,7 +16,7 @@ def create_comment(conn: sqlite3.Connection, comment: str, claim_id: str, channe
     try:
         comment_id = insert_comment(
             conn=conn, comment=comment, claim_id=claim_id, channel_id=channel_id,
-            signature=signature, parent_id=parent_id
+            signature=signature, parent_id=parent_id, signing_ts=signing_ts
         )
         return get_comment_or_none(conn, comment_id)
     except sqlite3.IntegrityError as ie:
