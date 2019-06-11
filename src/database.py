@@ -94,9 +94,8 @@ def insert_comment(conn: sqlite3.Connection, claim_id: str = None, comment: str 
                    channel_id: str = None, signature: str = None, signing_ts: str = None,
                    parent_id: str = None) -> str:
     timestamp = int(time.time())
-    prehash = ':'.join((claim_id, comment, str(timestamp),))
-    prehash = bytes(prehash.encode('utf-8'))
-    comment_id = nacl.hash.sha256(prehash).decode('utf-8')
+    prehash = b':'.join((claim_id.encode(), comment.encode(), str(timestamp).encode(),))
+    comment_id = nacl.hash.sha256(prehash).decode()
     with conn:
         conn.execute(
             """
