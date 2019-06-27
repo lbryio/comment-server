@@ -1,6 +1,22 @@
 # LBRY Comment Server
 
+This is the code for the LBRY Comment Server. 
+Fork it, run it, set it on fire. Up to you.
 
+
+## Prerequisites 
+In order to run the comment server properly, you will need the 
+following: 
+ 
+ 0. A Unix Compliant Operating System (e.g: Ubuntu, RedHat, Hannah Montana, etc.) 
+ 1. Any recent version of Sqlite3
+ 2. Python 3.6+ (including `python3-dev`, `python3-virtualenv`, `python3-pip`)
+    Note: You must specify the specific python version you're using,
+    e.g. for Python3.6, you would install `python36-dev`. You're smart enough to figure the rest out from here ;)
+ 3. (Optional) Reverse Proxy software to handle a public-facing API. 
+    We recommend Caddy, though there is an `nginx.conf` file under `config`.
+ 4. Patience (Strongly recommended but often neglected)
+ 
 ## Installation
 
 Installing the server:
@@ -20,31 +36,81 @@ $ source venv/bin/activate
 ```
 
 ## Usage
+
+### Running the Server
 To start the server, simply run:
 ```bash
 # to enter server's venv
 $ source venv/bin/activate
 
-# to actually run server
+# To start server as daemon process
 (venv) $ python -m main &  
 ```
 
+### Testing
+
+To Test the database, simply run: 
+```bash
+# To run the whole thing :
+(venv) $ python -m unittest tests.database
+
+# To run a specific TestName under a specified TestClass:
+(venv) $ python -m unittest tests.database.TestClass.TestName` 
+``` 
+
+There are basic tests to run against the server, though they require 
+that there is a server instance running, though the database
+ chosen may have to be edited in `config/conf.json`.
+
+Additionally there are HTTP requests that can be send with whatever 
+software you choose to test the integrity of the comment server.
+
 ## Schema
+
+
 ![schema](schema.png)
 
 
-## About
-A lot of the design is more or less the same with the original,
-except this version focuses less on performance and more on scalability.
+## Contributing
+Contributions are welcome, verbosity is encouraged. Please be considerate
+in your posts, and make sure that you give as much context to the issue 
+as possible, so that helping you is a slam dunk for us.
 
-Rewritten with python because it's easier to adjust
-and maintain. Instead of doing any multithreading,
-this implementation just delegates a single
-database connection for write operations.
+### Issues
+If you spotted an issue from the SDK side, please replicate it using 
+`curl` and one of the HTTP request templates in `tests/http_requests`. 
 
-The server was originally implemented with `aiohttp`
-and uses `aiojobs` for scheduling write operations.
-As pointed out by several people, Python is a dinosaur
-in comparison to SQLite's execution speed,
-so there is no sensibility in multi-threading from the
-perspective of the server code itself.
+Then, just include that along with the rest of your information.
+
+### Pull Requests
+Make sure the code works and has been tested beforehand. 
+Although we love helping out, our job is to review your code,
+not test it - that's what your computer is for. 
+
+
+Try to document the changes you made in a human language, 
+preferably English. (but we're always up for a challenge...)
+Use the level of verbosity you feel is correct, and when in doubt, 
+just [KISS](https://people.apache.org/~fhanik/kiss.html).
+
+### General 
+
+For more details, please refer to [lbry.tech/contribute](https://lbry.tech/contribute).
+
+
+## License
+This project is licensed by AGPLv3. 
+See [LICENSE](LICENSE.nd) for the full license.
+
+## Security 
+We take security seriously. 
+Please contact [security@lbry.io](security@lbry.io) regarding any conerns you might have, 
+issues you might encounter, or general outlooks on life. Our PGP key can 
+be found [here](https://keybase.io/lbry/key.asc), should you need it.
+
+## Contact Us
+The primary contact for this project is 
+[@osilkin98](https://github.com/osilkin98), and can be reached 
+at (o.silkin98@gmail.com). 
+
+
