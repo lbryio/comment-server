@@ -156,6 +156,14 @@ def get_comments_by_id(conn, comment_ids: list) -> typing.Union[list, None]:
         )]
 
 
+def delete_comment_by_id(conn: sqlite3.Connection, comment_id: str):
+    with conn:
+        if conn.execute('SELECT 1 FROM COMMENT WHERE CommentId = ? LIMIT 1', (comment_id,)).fetchone():
+            conn.execute("DELETE FROM COMMENT WHERE CommentId = ?", (comment_id,))
+            return True
+        return False
+
+
 class DatabaseWriter(object):
     _writer = None
 
