@@ -12,7 +12,7 @@ from src.database import DatabaseWriter
 from src.database import get_claim_comments
 from src.database import get_comments_by_id, get_comment_ids
 from src.database import obtain_connection
-from src.writes import create_comment
+from src.writes import create_comment_or_error
 
 logger = logging.getLogger(__name__)
 
@@ -22,22 +22,24 @@ ERRORS = {
     'UNKNOWN': {'code': -1, 'message': 'An unknown or very miscellaneous error'},
 }
 
+ID_LIST = {'claim_id', 'parent_id', 'comment_id', 'channel_id'}
 
-def ping(*args):
+
+def ping(*args, **kwargs):
     return 'pong'
 
 
-def handle_get_comment_ids(app, **kwargs):
+def handle_get_comment_ids(app, kwargs):
     with obtain_connection(app['db_path']) as conn:
         return get_comment_ids(conn, **kwargs)
 
 
-def handle_get_claim_comments(app, **kwargs):
+def handle_get_claim_comments(app, kwargs):
     with obtain_connection(app['db_path']) as conn:
         return get_claim_comments(conn, **kwargs)
 
 
-def handle_get_comments_by_id(app, **kwargs):
+def handle_get_comments_by_id(app, kwargs):
     with obtain_connection(app['db_path']) as conn:
         return get_comments_by_id(conn, **kwargs)
 
@@ -46,13 +48,13 @@ async def create_comment_scheduler():
     return await aiojobs.create_scheduler(limit=1, pending_limit=0)
 
 
-async def write_comment(**comment):
+async def write_comment(comment):
     with DatabaseWriter._writer.connection as conn:
-        return await coroutine(create_comment)(conn, **comment)
+        return await coroutine(create_comment_or_error)(conn, **comment)
 
 
-async def handle_create_comment(scheduler, **kwargs):
-    job = await scheduler.spawn(write_comment(**kwargs))
+async def handle_create_comment(scheduler, comment):
+    job = await scheduler.spawn(write_comment(comment))
     return await job.wait()
 
 
@@ -65,16 +67,25 @@ METHODS = {
 }
 
 
+def clean_input_params(kwargs: dict):
+    for k, v in kwargs.items():
+        if type(v) is str:
+            kwargs[k] = v.strip()
+            if k in ID_LIST:
+                kwargs[k] = v.lower()
+
+
 async def process_json(app, body: dict) -> dict:
     response = {'jsonrpc': '2.0', 'id': body['id']}
     if body['method'] in METHODS:
         method = body['method']
         params = body.get('params', {})
+        clean_input_params(params)
         try:
             if asyncio.iscoroutinefunction(METHODS[method]):
-                result = await METHODS[method](app['comment_scheduler'], **params)
+                result = await METHODS[method](app['comment_scheduler'], params)
             else:
-                result = METHODS[method](app, **params)
+                result = METHODS[method](app, params)
             response['result'] = result
         except TypeError as te:
             logger.exception('Got TypeError: %s', te)

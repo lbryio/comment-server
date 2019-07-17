@@ -29,7 +29,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
                 """ SELECT comment, comment_id, channel_name, channel_id, 
                         channel_url, timestamp, signature, signing_ts, parent_id
                     FROM COMMENTS_ON_CLAIMS 
-                    WHERE claim_id LIKE ? AND parent_id IS NULL
+                    WHERE claim_id = ? AND parent_id IS NULL
                     LIMIT ? OFFSET ? """,
                 (claim_id, page_size, page_size*(page - 1))
             )]
@@ -37,7 +37,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
                 """
                 SELECT COUNT(*)
                 FROM COMMENTS_ON_CLAIMS
-                WHERE claim_id LIKE ? AND parent_id IS NULL
+                WHERE claim_id = ? AND parent_id IS NULL
                 """, (claim_id, )
             )
         elif parent_id is None:
@@ -45,7 +45,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
                 """ SELECT comment, comment_id, channel_name, channel_id, 
                         channel_url, timestamp, signature, signing_ts, parent_id
                     FROM COMMENTS_ON_CLAIMS 
-                    WHERE claim_id LIKE ? 
+                    WHERE claim_id = ? 
                     LIMIT ? OFFSET ? """,
                 (claim_id, page_size, page_size*(page - 1))
             )]
@@ -53,7 +53,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
                 """
                     SELECT COUNT(*) 
                     FROM COMMENTS_ON_CLAIMS 
-                    WHERE claim_id LIKE ? 
+                    WHERE claim_id = ? 
                 """, (claim_id,)
             )
         else:
@@ -61,7 +61,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
                 """ SELECT comment, comment_id, channel_name, channel_id, 
                         channel_url, timestamp, signature, signing_ts, parent_id
                     FROM COMMENTS_ON_CLAIMS 
-                    WHERE claim_id LIKE ? AND parent_id = ?
+                    WHERE claim_id = ? AND parent_id = ?
                     LIMIT ? OFFSET ? """,
                 (claim_id, parent_id, page_size, page_size*(page - 1))
             )]
@@ -69,7 +69,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
                 """
                     SELECT COUNT(*) 
                     FROM COMMENTS_ON_CLAIMS 
-                    WHERE claim_id LIKE ? AND parent_id = ?
+                    WHERE claim_id = ? AND parent_id = ?
                 """, (claim_id, parent_id)
             )
         count = tuple(count.fetchone())[0]
@@ -133,13 +133,13 @@ def get_comment_ids(conn: sqlite3.Connection, claim_id: str, parent_id: str = No
         if parent_id is None:
             curs = conn.execute("""
                     SELECT comment_id FROM COMMENTS_ON_CLAIMS
-                    WHERE claim_id LIKE ? AND parent_id IS NULL LIMIT ? OFFSET ?
+                    WHERE claim_id = ? AND parent_id IS NULL LIMIT ? OFFSET ?
                 """, (claim_id, page_size, page_size*abs(page - 1),)
                                            )
         else:
             curs = conn.execute("""
                     SELECT comment_id FROM COMMENTS_ON_CLAIMS
-                    WHERE claim_id LIKE ? AND parent_id LIKE ? LIMIT ? OFFSET ?
+                    WHERE claim_id = ? AND parent_id = ? LIMIT ? OFFSET ?
                 """, (claim_id, parent_id, page_size, page_size * abs(page - 1),)
                                            )
     return [tuple(row)[0] for row in curs.fetchall()]
