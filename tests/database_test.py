@@ -7,7 +7,7 @@ from faker.providers import misc
 
 from src.database import get_comments_by_id, get_comment_ids, \
     get_claim_comments
-from src.writes import create_comment
+from src.writes import create_comment_or_error
 from tests.testcase import DatabaseTestCase
 
 fake = faker.Faker()
@@ -22,7 +22,7 @@ class TestCommentCreation(DatabaseTestCase):
         self.claimId = '529357c3422c6046d3fec76be2358004ba22e340'
 
     def test01NamedComments(self):
-        comment = create_comment(
+        comment = create_comment_or_error(
             conn=self.conn,
             claim_id=self.claimId,
             comment='This is a named comment',
@@ -34,7 +34,7 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertIsNotNone(comment)
         self.assertNotIn('parent_in', comment)
         previous_id = comment['comment_id']
-        reply = create_comment(
+        reply = create_comment_or_error(
             conn=self.conn,
             claim_id=self.claimId,
             comment='This is a named response',
@@ -48,14 +48,14 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertEqual(reply['parent_id'], comment['comment_id'])
 
     def test02AnonymousComments(self):
-        comment = create_comment(
+        comment = create_comment_or_error(
             conn=self.conn,
             claim_id=self.claimId,
             comment='This is an ANONYMOUS comment'
         )
         self.assertIsNotNone(comment)
         previous_id = comment['comment_id']
-        reply = create_comment(
+        reply = create_comment_or_error(
             conn=self.conn,
             claim_id=self.claimId,
             comment='This is an unnamed response',
@@ -65,7 +65,7 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertEqual(reply['parent_id'], comment['comment_id'])
 
     def test03SignedComments(self):
-        comment = create_comment(
+        comment = create_comment_or_error(
             conn=self.conn,
             claim_id=self.claimId,
             comment='I like big butts and i cannot lie',
@@ -77,7 +77,7 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertIsNotNone(comment)
         self.assertIn('signing_ts', comment)
         previous_id = comment['comment_id']
-        reply = create_comment(
+        reply = create_comment_or_error(
             conn=self.conn,
             claim_id=self.claimId,
             comment='This is a LBRY verified response',
@@ -94,14 +94,14 @@ class TestCommentCreation(DatabaseTestCase):
     def test04UsernameVariations(self):
         self.assertRaises(
             AssertionError,
-            callable=create_comment,
+            callable=create_comment_or_error,
             conn=self.conn,
             claim_id=self.claimId,
             channel_name='$#(@#$@#$',
             channel_id='529357c3422c6046d3fec76be2358001ba224b23',
             comment='this is an invalid username'
         )
-        valid_username = create_comment(
+        valid_username = create_comment_or_error(
             conn=self.conn,
             claim_id=self.claimId,
             channel_name='@' + 'a' * 255,
@@ -110,7 +110,7 @@ class TestCommentCreation(DatabaseTestCase):
         )
         self.assertIsNotNone(valid_username)
         self.assertRaises(AssertionError,
-                          callable=create_comment,
+                          callable=create_comment_or_error,
                           conn=self.conn,
                           claim_id=self.claimId,
                           channel_name='@' + 'a' * 256,
@@ -120,7 +120,7 @@ class TestCommentCreation(DatabaseTestCase):
 
         self.assertRaises(
             AssertionError,
-            callable=create_comment,
+            callable=create_comment_or_error,
             conn=self.conn,
             claim_id=self.claimId,
             channel_name='',
@@ -129,7 +129,7 @@ class TestCommentCreation(DatabaseTestCase):
         )
         self.assertRaises(
             AssertionError,
-            callable=create_comment,
+            callable=create_comment_or_error,
             conn=self.conn,
             claim_id=self.claimId,
             channel_name='@',
@@ -145,7 +145,7 @@ class TestCommentCreation(DatabaseTestCase):
         for _, comments in top_comments.items():
             for i, comment in enumerate(comments):
                 with self.subTest(comment=comment):
-                    result = create_comment(self.conn, **comment)
+                    result = create_comment_or_error(self.conn, **comment)
                     if result:
                         success += 1
                     comments[i] = result
@@ -155,7 +155,7 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertGreater(success, 0)
         success = 0
         for reply in generate_replies_random(top_comments):
-            reply_id = create_comment(self.conn, **reply)
+            reply_id = create_comment_or_error(self.conn, **reply)
             if reply_id:
                 success += 1
         self.assertGreater(success, 0)
@@ -169,7 +169,7 @@ class TestCommentCreation(DatabaseTestCase):
         total, success = 0, 0
         for _, comments in top_comments.items():
             for i, comment in enumerate(comments):
-                result = create_comment(self.conn, **comment)
+                result = create_comment_or_error(self.conn, **comment)
                 if result:
                     success += 1
                 comments[i] = result
@@ -178,7 +178,7 @@ class TestCommentCreation(DatabaseTestCase):
         self.assertEqual(total, success)
         self.assertGreater(total, 0)
         for reply in generate_replies(top_comments):
-            create_comment(self.conn, **reply)
+            create_comment_or_error(self.conn, **reply)
         for claim_id in claim_ids:
             comments_ids = get_comment_ids(self.conn, claim_id)
             with self.subTest(comments_ids=comments_ids):

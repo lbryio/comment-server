@@ -10,8 +10,8 @@ from src.misc import validate_signature
 logger = logging.getLogger(__name__)
 
 
-def create_comment(conn: sqlite3.Connection, comment: str, claim_id: str, channel_id: str = None,
-                   channel_name: str = None, signature: str = None, signing_ts: str = None, parent_id: str = None):
+def create_comment_or_error(conn: sqlite3.Connection, comment: str, claim_id: str, channel_id: str = None,
+                            channel_name: str = None, signature: str = None, signing_ts: str = None, parent_id: str = None):
     if channel_id or channel_name or signature or signing_ts:
         validate_signature(signature, signing_ts, comment, channel_name, channel_id)
         insert_channel_or_error(conn, channel_name, channel_id)
