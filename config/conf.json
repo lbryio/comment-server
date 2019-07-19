@@ -5,8 +5,8 @@
     "BACKUP": "database/comments.backup.db",
     "DEFAULT": "database/default.db",
     "TEST": "tests/test.db",
-    "ERROR_LOG": "error.log",
-    "LOG": "server.log"
+    "ERROR_LOG": "logs/error.log",
+    "LOG": "logs/server.log"
   },
   "LOGGING_FORMAT": "%(asctime)s - %(levelname)s - %(module)s - %(funcName)s - %(message)s",
   "HOST": "localhost",
