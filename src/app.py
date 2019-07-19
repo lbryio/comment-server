@@ -3,6 +3,7 @@ import logging
 import pathlib
 import re
 
+import aiojobs
 import aiojobs.aiohttp
 import asyncio
 from aiohttp import web
@@ -10,7 +11,6 @@ from aiohttp import web
 import schema.db_helpers
 from src.database import obtain_connection, DatabaseWriter
 from src.handles import api_endpoint
-from src.handles import create_comment_scheduler
 from src.settings import config_path, get_config
 
 config = get_config(config_path)
@@ -60,11 +60,13 @@ async def database_backup_routine(app):
         pass
 
 
+# noinspection PyDeprecation
 async def start_background_tasks(app: web.Application):
     app['reader'] = obtain_connection(app['db_path'], True)
     app['waitful_backup'] = app.loop.create_task(database_backup_routine(app))
-    app['comment_scheduler'] = await create_comment_scheduler()
-    app['writer'] = DatabaseWriter(app['db_path'])
+    app['comment_scheduler'] = await aiojobs.create_scheduler(limit=1, pending_limit=0)
+    app['db_writer'] = DatabaseWriter(app['db_path'])
+    app['writer'] = app['db_writer'].connection
 
 
 def insert_to_config(app, conf=None, db_file=None):
