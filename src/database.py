@@ -82,17 +82,8 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
         }
 
 
-def insert_channel(conn: sqlite3.Connection, channel_name: str, channel_id: str):
-    with conn:
-        conn.execute(
-            'INSERT INTO CHANNEL(ClaimId, Name)  VALUES (?, ?)',
-            (channel_id, channel_name)
-        )
-
-
-def insert_comment(conn: sqlite3.Connection, claim_id: str = None, comment: str = None,
-                   channel_id: str = None, signature: str = None, signing_ts: str = None,
-                   parent_id: str = None) -> str:
+def insert_comment(conn: sqlite3.Connection, claim_id: str, comment: str, parent_id: str = None,
+                   channel_id: str = None, signature: str = None, signing_ts: str = None) -> str:
     timestamp = int(time.time())
     prehash = b':'.join((claim_id.encode(), comment.encode(), str(timestamp).encode(),))
     comment_id = nacl.hash.sha256(prehash).decode()
@@ -156,12 +147,42 @@ def get_comments_by_id(conn, comment_ids: list) -> typing.Union[list, None]:
         )]
 
 
-def delete_comment_by_id(conn: sqlite3.Connection, comment_id: str):
+def delete_anonymous_comment_by_id(conn: sqlite3.Connection, comment_id: str):
     with conn:
-        if conn.execute('SELECT 1 FROM COMMENT WHERE CommentId = ? LIMIT 1', (comment_id,)).fetchone():
-            conn.execute("DELETE FROM COMMENT WHERE CommentId = ?", (comment_id,))
-            return True
-        return False
+        curs = conn.execute(
+            "DELETE FROM COMMENT WHERE ChannelId IS NULL AND CommentId = ?",
+            (comment_id,)
+        )
+        return curs.rowcount
+
+
+def delete_channel_comment_by_id(conn: sqlite3.Connection, comment_id: str, channel_id: str):
+    with conn:
+        curs = conn.execute(
+            "DELETE FROM COMMENT WHERE ChannelId = ? AND CommentId = ?",
+            (channel_id, comment_id)
+        )
+        return curs.rowcount
+
+
+def insert_channel(conn: sqlite3.Connection, channel_name: str, channel_id: str):
+    with conn:
+        conn.execute(
+            'INSERT INTO CHANNEL(ClaimId, Name)  VALUES (?, ?)',
+            (channel_id, channel_name)
+        )
+
+
+def get_channel_from_comment_id(conn: sqlite3.Connection, comment_id: str):
+    with conn:
+        channel = conn.execute("""
+            SELECT CHN.ClaimId AS channel_id, CHN.Name AS channel_name 
+            FROM CHANNEL AS CHN, COMMENT AS CMT
+            WHERE CHN.ClaimId = CMT.ChannelId AND CMT.CommentId = ?
+            LIMIT 1
+            """, (comment_id,)
+        ).fetchone()
+        return dict(channel) if channel else dict()
 
 
 class DatabaseWriter(object):

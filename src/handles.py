@@ -2,31 +2,31 @@
 import json
 import logging
 
-import aiojobs
 import asyncio
 from aiohttp import web
 from aiojobs.aiohttp import atomic
 from asyncio import coroutine
 
-from src.database import DatabaseWriter
+from misc import clean_input_params, ERRORS
 from src.database import get_claim_comments
 from src.database import get_comments_by_id, get_comment_ids
+from src.database import get_channel_from_comment_id
 from src.database import obtain_connection
+from src.database import delete_channel_comment_by_id
 from src.writes import create_comment_or_error
+from src.misc import is_authentic_delete_signal
 
 logger = logging.getLogger(__name__)
 
-ERRORS = {
-    'INVALID_PARAMS': {'code': -32602, 'message': 'Invalid parameters'},
-    'INTERNAL': {'code': -32603, 'message': 'An internal error'},
-    'UNKNOWN': {'code': -1, 'message': 'An unknown or very miscellaneous error'},
-}
 
-ID_LIST = {'claim_id', 'parent_id', 'comment_id', 'channel_id'}
-
-
-def ping(*args, **kwargs):
+# noinspection PyUnusedLocal
+def ping(*args):
     return 'pong'
+
+
+def handle_get_channel_from_comment_id(app, kwargs: dict):
+    with obtain_connection(app['db_path']) as conn:
+        return get_channel_from_comment_id(conn, **kwargs)
 
 
 def handle_get_comment_ids(app, kwargs):
@@ -44,18 +44,27 @@ def handle_get_comments_by_id(app, kwargs):
         return get_comments_by_id(conn, **kwargs)
 
 
-async def create_comment_scheduler():
-    return await aiojobs.create_scheduler(limit=1, pending_limit=0)
+async def write_comment(app, comment):
+    return await coroutine(create_comment_or_error)(app['writer'], **comment)
 
 
-async def write_comment(comment):
-    with DatabaseWriter._writer.connection as conn:
-        return await coroutine(create_comment_or_error)(conn, **comment)
-
-
-async def handle_create_comment(scheduler, comment):
-    job = await scheduler.spawn(write_comment(comment))
+async def handle_create_comment(app, params):
+    job = await app['comment_scheduler'].spawn(write_comment(app, params))
     return await job.wait()
+
+
+async def delete_comment_if_authorized(app, comment_id, channel_name, channel_id, signature):
+    authorized = await is_authentic_delete_signal(app, comment_id, channel_name, channel_id, signature)
+    if not authorized:
+        return {'deleted': False}
+
+    delete_query = delete_channel_comment_by_id(app['writer'], comment_id, channel_id)
+    job = await app['comment_scheduler'].spawn(delete_query)
+    return {'deleted': await job.wait()}
+
+
+async def handle_delete_comment(app, params):
+    return await delete_comment_if_authorized(app, **params)
 
 
 METHODS = {
@@ -63,16 +72,10 @@ METHODS = {
     'get_claim_comments': handle_get_claim_comments,
     'get_comment_ids': handle_get_comment_ids,
     'get_comments_by_id': handle_get_comments_by_id,
-    'create_comment': handle_create_comment
+    'get_channel_from_comment_id': handle_get_channel_from_comment_id,
+    'create_comment': handle_create_comment,
+    'delete_comment': handle_delete_comment,
 }
-
-
-def clean_input_params(kwargs: dict):
-    for k, v in kwargs.items():
-        if type(v) is str:
-            kwargs[k] = v.strip()
-            if k in ID_LIST:
-                kwargs[k] = v.lower()
 
 
 async def process_json(app, body: dict) -> dict:
@@ -83,7 +86,7 @@ async def process_json(app, body: dict) -> dict:
         clean_input_params(params)
         try:
             if asyncio.iscoroutinefunction(METHODS[method]):
-                result = await METHODS[method](app['comment_scheduler'], params)
+                result = await METHODS[method](app, params)
             else:
                 result = METHODS[method](app, params)
             response['result'] = result
@@ -93,8 +96,11 @@ async def process_json(app, body: dict) -> dict:
         except ValueError as ve:
             logger.exception('Got ValueError: %s', ve)
             response['error'] = ERRORS['INVALID_PARAMS']
+        except Exception as e:
+            logger.exception('Got unknown exception: %s', e)
+            response['error'] = ERRORS['INTERNAL']
     else:
-        response['error'] = ERRORS['UNKNOWN']
+        response['error'] = ERRORS['METHOD_NOT_FOUND']
     return response
 
 
@@ -105,16 +111,21 @@ async def api_endpoint(request: web.Request):
         body = await request.json()
         if type(body) is list or type(body) is dict:
             if type(body) is list:
+                # for batching
                 return web.json_response(
                     [await process_json(request.app, part) for part in body]
                 )
             else:
                 return web.json_response(await process_json(request.app, body))
         else:
-            return web.json_response({'error': ERRORS['UNKNOWN']})
+            logger.warning('Got invalid request from %s: %s', request.remote, body)
+            return web.json_response({'error': ERRORS['INVALID_REQUEST']})
     except json.decoder.JSONDecodeError as jde:
         logger.exception('Received malformed JSON from %s: %s', request.remote, jde.msg)
         logger.debug('Request headers: %s', request.headers)
         return web.json_response({
-            'error': {'message': jde.msg, 'code': -1}
+            'error': ERRORS['PARSE_ERROR']
         })
+    except Exception as e:
+        logger.exception('Exception raised by request from %s: %s', request.remote, e)
+        return web.json_response({'error': ERRORS['INVALID_REQUEST']})
