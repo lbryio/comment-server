@@ -9,7 +9,7 @@ from asyncio import coroutine
 from misc import clean_input_params
 from src.database import get_claim_comments
 from src.database import get_comments_by_id, get_comment_ids
-from src.database import get_channel_from_comment_id
+from src.database import get_channel_id_from_comment_id
 from src.database import obtain_connection
 from src.database import delete_comment_by_id
 from src.writes import create_comment_or_error
@@ -26,7 +26,7 @@ def ping(*args):
 
 def handle_get_channel_from_comment_id(app, kwargs: dict):
     with obtain_connection(app['db_path']) as conn:
-        return get_channel_from_comment_id(conn, **kwargs)
+        return get_channel_id_from_comment_id(conn, **kwargs)
 
 
 def handle_get_comment_ids(app, kwargs):

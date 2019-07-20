@@ -170,14 +170,11 @@ def insert_channel(conn: sqlite3.Connection, channel_name: str, channel_id: str)
         )
 
 
-def get_channel_from_comment_id(conn: sqlite3.Connection, comment_id: str):
+def get_channel_id_from_comment_id(conn: sqlite3.Connection, comment_id: str):
     with conn:
         channel = conn.execute("""
-            SELECT CHN.ClaimId AS channel_id, CHN.Name AS channel_name 
-            FROM CHANNEL AS CHN, COMMENT AS CMT
-            WHERE CHN.ClaimId = CMT.ChannelId AND CMT.CommentId = ?
-            LIMIT 1
-            """, (comment_id,)
+            SELECT channel_id, channel_name FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?
+        """, (comment_id,)
         ).fetchone()
         return dict(channel) if channel else dict()
 
