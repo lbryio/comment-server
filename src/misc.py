@@ -31,6 +31,17 @@ ERRORS = {
 }
 
 
+def make_error(error, exc: Exception = None) -> dict:
+    body = ERRORS[error] if error in ERRORS else ERRORS['INTERNAL']
+    try:
+        if exc:
+            body.update({
+                type(exc).__name__: str(exc)
+            })
+    finally:
+        return body
+
+
 def channel_matches_pattern(channel_id: str, channel_name: str):
     assert channel_id and channel_name
     assert type(channel_id) is str and type(channel_name) is str

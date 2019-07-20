@@ -14,6 +14,7 @@ from src.database import obtain_connection
 from src.database import delete_comment_by_id
 from src.writes import create_comment_or_error
 from src.misc import is_authentic_delete_signal
+from src.misc import make_error
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,7 @@ async def process_json(app, body: dict) -> dict:
             else:
                 response['error'] = make_error('INTERNAL', err)
     else:
-        response['error'] = ERRORS['METHOD_NOT_FOUND']
+        response['error'] = make_error('METHOD_NOT_FOUND')
     return response
 
 
@@ -117,15 +118,6 @@ async def api_endpoint(request: web.Request):
                 )
             else:
                 return web.json_response(await process_json(request.app, body))
-        else:
-            logger.warning('Got invalid request from %s: %s', request.remote, body)
-            return web.json_response({'error': ERRORS['INVALID_REQUEST']})
-    except json.decoder.JSONDecodeError as jde:
-        logger.exception('Received malformed JSON from %s: %s', request.remote, jde.msg)
-        logger.debug('Request headers: %s', request.headers)
-        return web.json_response({
-            'error': ERRORS['PARSE_ERROR']
-        })
     except Exception as e:
         logger.exception(f'Exception raised by request from {request.remote}: {e}')
         logger.debug(f'Request headers: {request.headers}')
