@@ -95,7 +95,7 @@ def insert_comment(conn: sqlite3.Connection, claim_id: str, comment: str, parent
             """,
             (comment_id, claim_id, channel_id, comment, parent_id, timestamp, signature, signing_ts)
         )
-    logger.debug('Inserted Comment into DB, `comment_id`: %s', comment_id)
+    logger.info('Inserted Comment into DB, `comment_id`: %s', comment_id)
     return comment_id
 
 

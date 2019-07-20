@@ -1,9 +1,7 @@
 # cython: language_level=3
 import json
-import logging
 import pathlib
 
-logger = logging.getLogger(__name__)
 
 root_dir = pathlib.Path(__file__).parent.parent
 config_path = root_dir / 'config' / 'conf.json'
@@ -18,4 +16,3 @@ def get_config(filepath):
 
 
 config = get_config(config_path)
-logger.info('Loaded conf.json: %s', json.dumps(config, indent=4))

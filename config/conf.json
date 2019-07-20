@@ -6,9 +6,14 @@
     "DEFAULT": "database/default.db",
     "TEST": "tests/test.db",
     "ERROR_LOG": "logs/error.log",
-    "LOG": "logs/server.log"
+    "DEBUG_LOG": "logs/debug.log",
+    "SERVER_LOG": "logs/server.log"
   },
-  "LOGGING_FORMAT": "%(asctime)s - %(levelname)s - %(module)s - %(funcName)s - %(message)s",
+  "LOGGING": {
+    "FORMAT":  "%(asctime)s | %(levelname)s | %(name)s | %(module)s.%(funcName)s:%(lineno)d | %(message)s",
+    "AIOHTTP_FORMAT": "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    "DATEFMT": "%Y-%m-%d %H:%M:%S"
+  },
   "HOST": "localhost",
   "PORT": 5921,
   "BACKUP_INT": 3600,

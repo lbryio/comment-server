@@ -11,29 +11,8 @@ from aiohttp import web
 import schema.db_helpers
 from src.database import obtain_connection, DatabaseWriter
 from src.handles import api_endpoint
-from src.settings import config_path, get_config
-
-config = get_config(config_path)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter(config['LOGGING_FORMAT'])
-debug_handler = logging.FileHandler(config['PATH']['LOG'])
-error_handler = logging.FileHandler(config['PATH']['ERROR_LOG'])
-stdout_handler = logging.StreamHandler()
-
-debug_handler.setLevel(logging.DEBUG)
-error_handler.setLevel(logging.ERROR)
-stdout_handler.setLevel(logging.DEBUG)
-
-debug_handler.setFormatter(formatter)
-error_handler.setFormatter(formatter)
-stdout_handler.setFormatter(formatter)
-
-logger.addHandler(debug_handler)
-logger.addHandler(error_handler)
-logger.addHandler(stdout_handler)
 
 
 async def setup_db_schema(app):
@@ -45,7 +24,7 @@ async def setup_db_schema(app):
 
 
 async def close_comment_scheduler(app):
-    logger.debug('Closing comment_scheduler')
+    logger.info('Closing comment_scheduler')
     await app['comment_scheduler'].close()
 
 
@@ -78,7 +57,7 @@ def insert_to_config(app, conf=None, db_file=None):
 
 
 async def cleanup_background_tasks(app):
-    logger.debug('Ending background backup loop')
+    logger.info('Ending background backup loop')
     app['waitful_backup'].cancel()
     await app['waitful_backup']
     app['reader'].close()
@@ -90,17 +69,17 @@ def create_app(conf, db_path='DEFAULT', **kwargs):
     insert_to_config(app, conf, db_path)
     app.on_startup.append(setup_db_schema)
     app.on_startup.append(start_background_tasks)
-    app.on_shutdown.append(close_comment_scheduler)
     app.on_shutdown.append(cleanup_background_tasks)
+    app.on_shutdown.append(close_comment_scheduler)
     aiojobs.aiohttp.setup(app, **kwargs)
     app.add_routes([web.post('/api', api_endpoint)])
     return app
 
 
-def run_app():
+def run_app(config):
     appl = create_app(conf=config, db_path='DEFAULT', close_timeout=5.0)
     try:
-        asyncio.run(web.run_app(appl, access_log=logger, host=config['HOST'], port=config['PORT']))
+        asyncio.run(web.run_app(appl, access_log=logging.getLogger('aiohttp.access'), host=config['HOST'], port=config['PORT']))
     except asyncio.CancelledError:
         pass
     except ValueError:

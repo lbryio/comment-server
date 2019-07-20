@@ -84,21 +84,19 @@ async def process_json(app, body: dict) -> dict:
         method = body['method']
         params = body.get('params', {})
         clean_input_params(params)
+        logger.debug(f'Received Method {method}, params: {params}')
         try:
             if asyncio.iscoroutinefunction(METHODS[method]):
                 result = await METHODS[method](app, params)
             else:
                 result = METHODS[method](app, params)
             response['result'] = result
-        except TypeError as te:
-            logger.exception('Got TypeError: %s', te)
-            response['error'] = ERRORS['INVALID_PARAMS']
-        except ValueError as ve:
-            logger.exception('Got ValueError: %s', ve)
-            response['error'] = ERRORS['INVALID_PARAMS']
-        except Exception as e:
-            logger.exception('Got unknown exception: %s', e)
-            response['error'] = ERRORS['INTERNAL']
+        except Exception as err:
+            logger.exception(f'Got {type(err).__name__}: {err}')
+            if type(err) in (ValueError, TypeError):
+                response['error'] = make_error('INVALID_PARAMS', err)
+            else:
+                response['error'] = make_error('INTERNAL', err)
     else:
         response['error'] = ERRORS['METHOD_NOT_FOUND']
     return response
@@ -107,7 +105,6 @@ async def process_json(app, body: dict) -> dict:
 @atomic
 async def api_endpoint(request: web.Request):
     try:
-        logger.info('Received POST request from %s', request.remote)
         body = await request.json()
         if type(body) is list or type(body) is dict:
             if type(body) is list:
@@ -127,5 +124,6 @@ async def api_endpoint(request: web.Request):
             'error': ERRORS['PARSE_ERROR']
         })
     except Exception as e:
-        logger.exception('Exception raised by request from %s: %s', request.remote, e)
-        return web.json_response({'error': ERRORS['INVALID_REQUEST']})
+        logger.exception(f'Exception raised by request from {request.remote}: {e}')
+        logger.debug(f'Request headers: {request.headers}')
+        return make_error('INVALID_REQUEST', e)
