@@ -1,5 +1,4 @@
 # cython: language_level=3
-import json
 import logging
 
 import asyncio
@@ -7,12 +6,12 @@ from aiohttp import web
 from aiojobs.aiohttp import atomic
 from asyncio import coroutine
 
-from misc import clean_input_params, ERRORS
+from misc import clean_input_params
 from src.database import get_claim_comments
 from src.database import get_comments_by_id, get_comment_ids
 from src.database import get_channel_from_comment_id
 from src.database import obtain_connection
-from src.database import delete_channel_comment_by_id
+from src.database import delete_comment_by_id
 from src.writes import create_comment_or_error
 from src.misc import is_authentic_delete_signal
 
@@ -48,6 +47,10 @@ async def write_comment(app, comment):
     return await coroutine(create_comment_or_error)(app['writer'], **comment)
 
 
+async def delete_comment(app, comment_id):
+    return await coroutine(delete_comment_by_id)(app['writer'], comment_id)
+
+
 async def handle_create_comment(app, params):
     job = await app['comment_scheduler'].spawn(write_comment(app, params))
     return await job.wait()
@@ -58,8 +61,7 @@ async def delete_comment_if_authorized(app, comment_id, channel_name, channel_id
     if not authorized:
         return {'deleted': False}
 
-    delete_query = delete_channel_comment_by_id(app['writer'], comment_id, channel_id)
-    job = await app['comment_scheduler'].spawn(delete_query)
+    job = await app['comment_scheduler'].spawn(delete_comment(app, comment_id))
     return {'deleted': await job.wait()}
 
 
@@ -75,6 +77,7 @@ METHODS = {
     'get_channel_from_comment_id': handle_get_channel_from_comment_id,
     'create_comment': handle_create_comment,
     'delete_comment': handle_delete_comment,
+    'abandon_comment': handle_delete_comment,
 }
 
 

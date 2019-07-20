@@ -3,7 +3,7 @@ import logging
 import re
 from json import JSONDecodeError
 
-from nacl.hash import sha256
+import hashlib
 import aiohttp
 
 import ecdsa
@@ -53,10 +53,13 @@ async def resolve_channel_claim(app: dict, channel_id: str, channel_name: str):
     async with aiohttp.request('POST', app['config']['LBRYNET'], json=resolve_body) as req:
         try:
             resp = await req.json()
-            return resp.get(lbry_url)
         except JSONDecodeError as jde:
             logger.exception(jde.msg)
-            raise Exception(jde)
+            raise Exception('JSON Decode Error in Claim Resolution')
+        finally:
+            if 'result' in resp:
+                return resp['result'].get(lbry_url)
+            raise ValueError('claim resolution yields error', {'error': resp['error']})
 
 
 def is_signature_valid(encoded_signature, signature_digest, public_key_bytes):
@@ -85,9 +88,10 @@ async def is_authentic_delete_signal(app, comment_id: str, channel_name: str, ch
     if claim:
         public_key = claim['value']['public_key']
         claim_hash = binascii.unhexlify(claim['claim_id'].encode())[::-1]
+        pieces_injest = b''.join((comment_id.encode(), claim_hash))
         return is_signature_valid(
             encoded_signature=get_encoded_signature(signature),
-            signature_digest=sha256(b''.join([comment_id.encode(), claim_hash])),
+            signature_digest=hashlib.sha256(pieces_injest).digest(),
             public_key_bytes=binascii.unhexlify(public_key.encode())
         )
     return False

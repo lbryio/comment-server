@@ -156,13 +156,10 @@ def delete_anonymous_comment_by_id(conn: sqlite3.Connection, comment_id: str):
         return curs.rowcount
 
 
-def delete_channel_comment_by_id(conn: sqlite3.Connection, comment_id: str, channel_id: str):
+def delete_comment_by_id(conn: sqlite3.Connection, comment_id: str):
     with conn:
-        curs = conn.execute(
-            "DELETE FROM COMMENT WHERE ChannelId = ? AND CommentId = ?",
-            (channel_id, comment_id)
-        )
-        return curs.rowcount
+        curs = conn.execute("DELETE FROM COMMENT WHERE CommentId = ?", (comment_id,))
+        return bool(curs.rowcount)
 
 
 def insert_channel(conn: sqlite3.Connection, channel_name: str, channel_id: str):
