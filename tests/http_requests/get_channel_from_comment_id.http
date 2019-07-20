@@ -10,10 +10,9 @@ Content-Type: application/json
 {
   "jsonrpc": "2.0",
   "id": null,
-  "method": "get_claim_comments",
+  "method": get_channel_from_comment_id,
   "params": {
-    "claim_id": "6d266af6c25c80fa2ac6cc7662921ad2e90a07e8",
-    "page": 1
+    "comment_id": "1a346d7aa4dcc9c6c3f0c702c9cb723e9cdc35f6b8e09d36f553ba6f1b898f83"
   }
 }
 
