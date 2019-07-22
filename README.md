@@ -15,7 +15,7 @@ following:
     e.g. for Python3.6, you would install `python36-dev`. You're smart enough to figure the rest out from here ;)
  3. (Optional) Reverse Proxy software to handle a public-facing API. 
     We recommend Caddy, though there is an `nginx.conf` file under `config`.
- 4. Patience (Strongly recommended but often neglected)
+ 5. Patience (Strongly recommended but often neglected)
  
 ## Installation
 
