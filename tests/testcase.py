@@ -1,11 +1,12 @@
+import pathlib
 import unittest
 from asyncio.runners import _cancel_all_tasks  # type: ignore
 from unittest.case import _Outcome
 
 import asyncio
 
-from src.database import obtain_connection
 from schema.db_helpers import setup_database, teardown_database
+from src.database import obtain_connection
 from src.settings import config
 
 
@@ -120,6 +121,8 @@ class AsyncioTestCase(unittest.TestCase):
 class DatabaseTestCase(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
+        if pathlib.Path(config['PATH']['TEST']).exists():
+            teardown_database(config['PATH']['TEST'])
         setup_database(config['PATH']['TEST'])
         self.conn = obtain_connection(config['PATH']['TEST'])
 

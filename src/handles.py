@@ -2,17 +2,17 @@
 import json
 import logging
 
-import asyncio
 import aiojobs
-from asyncio import coroutine
+import asyncio
 from aiohttp import web
 from aiojobs.aiohttp import atomic
+from asyncio import coroutine
 
-from src.writes import DatabaseWriter
+from src.database import DatabaseWriter
 from src.database import get_claim_comments
 from src.database import get_comments_by_id, get_comment_ids
 from src.database import obtain_connection
-from src.database import create_comment
+from src.writes import create_comment
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +79,9 @@ async def process_json(app, body: dict) -> dict:
         except TypeError as te:
             logger.exception('Got TypeError: %s', te)
             response['error'] = ERRORS['INVALID_PARAMS']
+        except ValueError as ve:
+            logger.exception('Got ValueError: %s', ve)
+            response['error'] = ERRORS['INVALID_PARAMS']
     else:
         response['error'] = ERRORS['UNKNOWN']
     return response
@@ -87,8 +90,8 @@ async def process_json(app, body: dict) -> dict:
 @atomic
 async def api_endpoint(request: web.Request):
     try:
-        body = await request.json()
         logger.info('Received POST request from %s', request.remote)
+        body = await request.json()
         if type(body) is list or type(body) is dict:
             if type(body) is list:
                 return web.json_response(
@@ -104,7 +107,3 @@ async def api_endpoint(request: web.Request):
         return web.json_response({
             'error': {'message': jde.msg, 'code': -1}
         })
-
-
-
-

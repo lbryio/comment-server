@@ -8,11 +8,10 @@ import asyncio
 from aiohttp import web
 
 import schema.db_helpers
-from src.database import obtain_connection
+from src.database import obtain_connection, DatabaseWriter
 from src.handles import api_endpoint
 from src.handles import create_comment_scheduler
 from src.settings import config_path, get_config
-from src.writes import DatabaseWriter
 
 config = get_config(config_path)
 
@@ -50,21 +49,20 @@ async def close_comment_scheduler(app):
     await app['comment_scheduler'].close()
 
 
-async def create_database_backup(app):
+async def database_backup_routine(app):
     try:
         while True:
             await asyncio.sleep(app['config']['BACKUP_INT'])
             with obtain_connection(app['db_path']) as conn:
                 logger.debug('backing up database')
                 schema.db_helpers.backup_database(conn, app['backup'])
-
-    except asyncio.CancelledError as e:
+    except asyncio.CancelledError:
         pass
 
 
 async def start_background_tasks(app: web.Application):
     app['reader'] = obtain_connection(app['db_path'], True)
-    app['waitful_backup'] = app.loop.create_task(create_database_backup(app))
+    app['waitful_backup'] = app.loop.create_task(database_backup_routine(app))
     app['comment_scheduler'] = await create_comment_scheduler()
     app['writer'] = DatabaseWriter(app['db_path'])
 
