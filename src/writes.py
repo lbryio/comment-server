@@ -3,8 +3,8 @@ import sqlite3
 
 from asyncio import coroutine
 
-from database import delete_comment_by_id
-from misc import is_authentic_delete_signal
+from src.database import delete_comment_by_id
+from src.misc import is_authentic_delete_signal
 
 from src.database import get_comment_or_none
 from src.database import insert_comment

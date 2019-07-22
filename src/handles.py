@@ -14,7 +14,7 @@ from src.database import obtain_connection
 from src.misc import is_valid_base_comment
 from src.misc import is_valid_credential_input
 from src.misc import make_error
-from writes import delete_comment_if_authorized, write_comment
+from src.writes import delete_comment_if_authorized, write_comment
 
 logger = logging.getLogger(__name__)
 
