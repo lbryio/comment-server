@@ -1,10 +1,9 @@
 import unittest
-from random import randint
-
 import requests
 import re
-import faker
 from itertools import *
+
+import faker
 from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
@@ -15,6 +14,7 @@ fake = faker.Faker()
 fake.add_provider(internet)
 fake.add_provider(lorem)
 fake.add_provider(misc)
+
 
 def fake_lbryusername():
     return '@' + fake.user_name()
@@ -31,14 +31,13 @@ def jsonrpc_post(url, method, **params):
 
 
 def nothing():
-    return None
+    pass
 
 
 class ServerTest(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.url = 'http://' + config['HOST'] + ':5921/api'
-
 
     def post_comment(self, **params):
         json_body = {
@@ -49,41 +48,39 @@ class ServerTest(unittest.TestCase):
         }
         return requests.post(url=self.url, json=json_body)
 
-    def assertIsValidMessageTest(self, message, test):
-        self.assertIsNotNone(message)
+    def is_valid_message(self, comment=None, claim_id=None, parent_id=None,
+                         channel_name=None, channel_id=None, signature=None, signing_ts=None):
         try:
-            if not test['claim_id'] or \
-                    (bool(test['channel_id']) ^ bool(test['channel_name'])):
-                self.assertIn('error', message)
-                self.assertNotIn('result', message)
-            else:
-                self.assertNotIn('error', message)
-                self.assertIn('result', message)
-                self.assertIn('comment_id', message['result'])
-                self.assertEquals(message['result']['claim_id'], test['claim_id'])
-        except AssertionError:
-            raise requests.HTTPError(message.text)
+            assert comment is not None and claim_id is not None
+            assert re.fullmatch('([a-f0-9]|[A-F0-9]){40}', claim_id)
+            assert 0 < len(comment) <= 2000
+            if parent_id is not None:
+                assert re.fullmatch('([a-f0-9]){64}', parent_id)
 
-    def isValidMessage(self, message: dict):
-        return message and type(message) is dict and ('error' in message or 'result' in message)
-
-    def isValidTest(self, test: dict):
-        cond = test['claim_id'] and test['comment'] and not \
-                (bool(test['channel_id']) ^ bool(test['channel_name']))
-        if cond:
-            cond = (0 < len(test['comment']) <= 2000) and cond
-            if test['channel_id']:
-                cond = (1 < len(test['channel_name']) <= 256) and cond
-                channel_match = re.fullmatch(
-                    '^@(?:(?![\x00-\x08\x0b\x0c\x0e-\x1f\x23-\x26'
-                    '\x2f\x3a\x3d\x3f-\x40\uFFFE-\U0000FFFF]).){1,255}$',
-                    test['channel_name']
-                )
-                cond = cond and channel_match
-        return cond
+            if channel_name or channel_id or signature or signing_ts:
+                assert channel_id is not None and channel_name is not None
+                assert re.fullmatch('([a-f0-9]|[A-F0-9]){40}', channel_id)
+                assert self.valid_channel_name(channel_name)
+                assert (signature is None and signing_ts is None) or \
+                       (signature is not None and signing_ts is not None)
+                if signature:
+                    assert len(signature) == 128
+                if parent_id:
+                    assert parent_id.isalnum()
+        except Exception:
+            return False
+        return True
 
     def setUp(self) -> None:
         self.reply_id = 'ace7800f36e55c74c4aa6a698f97a7ee5f1ccb047b5a0730960df90e58c41dc2'
+
+    @staticmethod
+    def valid_channel_name(channel_name):
+        return re.fullmatch(
+            '^@(?:(?![\x00-\x08\x0b\x0c\x0e-\x1f\x23-\x26'
+            '\x2f\x3a\x3d\x3f-\x40\uFFFE-\U0000FFFF]).){1,255}$',
+            channel_name
+        )
 
     def test01CreateCommentNoReply(self):
         anonymous_test = create_test_comments(
@@ -97,12 +94,11 @@ class ServerTest(unittest.TestCase):
             with self.subTest(test=test):
                 message = self.post_comment(**test)
                 message = message.json()
-                if self.isValidTest(test):
-                    self.assertIn('result', message)
-                    self.assertIsNotNone(message['result'])
-                    self.assertIn('comment_id', message['result'])
+                self.assertTrue('result' in message or 'error' in message)
+                if 'error' in message:
+                    self.assertFalse(self.is_valid_message(**test))
                 else:
-                    self.assertIn('error', message)
+                    self.assertTrue(self.is_valid_message(**test))
 
     def test02CreateNamedCommentsNoReply(self):
         named_test = create_test_comments(
@@ -117,10 +113,11 @@ class ServerTest(unittest.TestCase):
             with self.subTest(test=test):
                 message = self.post_comment(**test)
                 message = message.json()
-                if self.isValidTest(test):
-                    self.assertTrue(self.isValidMessage(message))
+                self.assertTrue('result' in message or 'error' in message)
+                if 'error' in message:
+                    self.assertFalse(self.is_valid_message(**test))
                 else:
-                    self.assertFalse(self.isValidMessage(message))
+                    self.assertTrue(self.is_valid_message(**test))
 
     def test03CreateAllTestComments(self):
         test_all = create_test_comments(replace.keys(), **{
@@ -130,13 +127,11 @@ class ServerTest(unittest.TestCase):
             with self.subTest(test=test):
                 message = self.post_comment(**test)
                 message = message.json()
-                if self.isValidTest(test):
-                    self.assertTrue(self.isValidMessage(message))
-                    self.assertNotIn('error', message)
-                    self.assertIsNotNone(message['result'])
+                self.assertTrue('result' in message or 'error' in message)
+                if 'error' in message:
+                    self.assertFalse(self.is_valid_message(**test))
                 else:
-                    self.assertIsNotNone(message)
-                    self.assertIn('error', message)
+                    self.assertTrue(self.is_valid_message(**test))
 
     def test04CreateAllReplies(self):
         claim_id = '1d8a5cc39ca02e55782d619e67131c0a20843be8'
@@ -157,22 +152,17 @@ class ServerTest(unittest.TestCase):
             claim_id=claim_id
         )
         for test in test_all:
-            with self.subTest(test=test) as subtest:
+            with self.subTest(test=test):
                 if test['parent_id'] != parent_id:
                     continue
                 else:
                     message = self.post_comment(**test)
                     message = message.json()
-                    if self.isValidTest(test):
-                        self.assertTrue(self.isValidMessage(message))
-                        self.assertNotIn('error', message)
-                        self.assertIsNotNone(message['result'])
-                        message = message['result']
-                        self.assertIn('parent_id', message)
-                        self.assertEquals(message['parent_id'], parent_id)
+                    self.assertTrue('result' in message or 'error' in message)
+                    if 'error' in message:
+                        self.assertFalse(self.is_valid_message(**test))
                     else:
-                        self.assertIn('error', message)
-
+                        self.assertTrue(self.is_valid_message(**test))
 
 
 class ListCommentsTest(unittest.TestCase):
@@ -244,15 +234,5 @@ def create_test_comments(values: iter, **default):
     return [{k: replace[k]() if k in comb else v for k, v in default.items()}
             for comb in vars_combo]
 
-
-def create_comment(channel_name, channel_id, claim_id=None, maxchar=500, reply_id=None, signature=None, parent_id=None):
-    return {
-        'claim_id': claim_id if claim_id else fake.sha1(),
-        'comment': ''.join(fake.text(max_nb_chars=maxchar)),
-        'channel_name': channel_name,
-        'channel_id': channel_id,
-        'signature': signature if signature else fake.uuid4(),
-        'parent_id': reply_id
-    }
 
 
