@@ -76,6 +76,7 @@ async def process_json(app, body: dict) -> dict:
         clean_input_params(params)
         logger.debug(f'Received Method {method}, params: {params}')
         try:
+            start = time.time()
             if asyncio.iscoroutinefunction(METHODS[method]):
                 result = await METHODS[method](app, params)
             else:
@@ -87,6 +88,9 @@ async def process_json(app, body: dict) -> dict:
                 response['error'] = make_error('INVALID_PARAMS', err)
             else:
                 response['error'] = make_error('INTERNAL', err)
+        finally:
+            end = time.time()
+            logger.debug(f'Time taken to process {method}: {end - start} secs')
     else:
         response['error'] = make_error('METHOD_NOT_FOUND')
     return response
