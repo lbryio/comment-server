@@ -2,6 +2,7 @@
 import logging
 import pathlib
 import re
+import time
 
 import aiojobs
 import aiojobs.aiohttp
@@ -32,7 +33,7 @@ async def database_backup_routine(app):
     try:
         while True:
             await asyncio.sleep(app['config']['BACKUP_INT'])
-            with obtain_connection(app['db_path']) as conn:
+            with app['reader'] as conn:
                 logger.debug('backing up database')
                 schema.db_helpers.backup_database(conn, app['backup'])
     except asyncio.CancelledError:
@@ -50,7 +51,7 @@ async def start_background_tasks(app: web.Application):
 
 def insert_to_config(app, conf=None, db_file=None):
     db_file = db_file if db_file else 'DEFAULT'
-    app['config'] = conf if conf else config
+    app['config'] = conf
     app['db_path'] = conf['PATH'][db_file]
     app['backup'] = re.sub(r'\.db$', '.backup.db', app['db_path'])
     assert app['db_path'] != app['backup']
@@ -66,6 +67,7 @@ async def cleanup_background_tasks(app):
 
 def create_app(conf, db_path='DEFAULT', **kwargs):
     app = web.Application()
+    app['START_TIME'] = int(time.time())
     insert_to_config(app, conf, db_path)
     app.on_startup.append(setup_db_schema)
     app.on_startup.append(start_background_tasks)
@@ -83,8 +85,13 @@ def create_app(conf, db_path='DEFAULT', **kwargs):
 def run_app(config):
     appl = create_app(conf=config, db_path='DEFAULT', close_timeout=5.0)
     try:
-        asyncio.run(web.run_app(appl, access_log=logging.getLogger('aiohttp.access'), host=config['HOST'], port=config['PORT']))
+        asyncio.run(web.run_app(
+            app=appl,
+            access_log=logging.getLogger('aiohttp.access'),
+            host=config['HOST'],
+            port=config['PORT']
+        ))
     except asyncio.CancelledError:
-        pass
+        logging.warning('Server going down, asyncio loop raised cancelled error:')
     except ValueError:
-        pass
+        logging.exception('Server going down due to value error:')
