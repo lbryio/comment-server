@@ -31,7 +31,7 @@ ERRORS = {
 }
 
 
-def make_error(error, exc: Exception = None) -> dict:
+def make_error(error, exc=None) -> dict:
     body = ERRORS[error] if error in ERRORS else ERRORS['INTERNAL']
     try:
         if exc:
@@ -42,18 +42,7 @@ def make_error(error, exc: Exception = None) -> dict:
         return body
 
 
-def channel_matches_pattern(channel_id: str, channel_name: str):
-    assert channel_id and channel_name
-    assert type(channel_id) is str and type(channel_name) is str
-    assert re.fullmatch(
-        '^@(?:(?![\x00-\x08\x0b\x0c\x0e-\x1f\x23-\x26'
-        '\x2f\x3a\x3d\x3f-\x40\uFFFE-\U0000FFFF]).){1,255}$',
-        channel_name
-    )
-    assert re.fullmatch('[a-z0-9]{40}', channel_id)
-
-
-async def resolve_channel_claim(app: dict, channel_id: str, channel_name: str):
+async def resolve_channel_claim(app, channel_id, channel_name):
     lbry_url = f'lbry://{channel_name}#{channel_id}'
     resolve_body = {
         'method': 'resolve',
@@ -73,6 +62,24 @@ async def resolve_channel_claim(app: dict, channel_id: str, channel_name: str):
             raise ValueError('claim resolution yields error', {'error': resp['error']})
 
 
+def get_encoded_signature(signature):
+    signature = signature.encode() if type(signature) is str else signature
+    r = int(signature[:int(len(signature) / 2)], 16)
+    s = int(signature[int(len(signature) / 2):], 16)
+    return ecdsa.util.sigencode_der(r, s, len(signature) * 4)
+
+
+def channel_matches_pattern_or_error(channel_id, channel_name):
+    assert channel_id and channel_name
+    assert re.fullmatch(
+        '^@(?:(?![\x00-\x08\x0b\x0c\x0e-\x1f\x23-\x26'
+        '\x2f\x3a\x3d\x3f-\x40\uFFFE-\U0000FFFF]).){1,255}$',
+        channel_name
+    )
+    assert re.fullmatch('([a-f0-9]|[A-F0-9]){40}', channel_id)
+    return True
+
+
 def is_signature_valid(encoded_signature, signature_digest, public_key_bytes):
     try:
         public_key = load_der_public_key(public_key_bytes, default_backend())
@@ -83,18 +90,29 @@ def is_signature_valid(encoded_signature, signature_digest, public_key_bytes):
     return False
 
 
-def get_encoded_signature(signature):
-    signature = signature.encode() if type(signature) is str else signature
-    r = int(signature[:int(len(signature) / 2)], 16)
-    s = int(signature[int(len(signature) / 2):], 16)
-    return ecdsa.util.sigencode_der(r, s, len(signature) * 4)
+def is_valid_base_comment(comment, claim_id, parent_id=None, **kwargs):
+    try:
+        assert 0 < len(comment) <= 2000
+        assert (parent_id is None) or (0 < len(parent_id) <= 2000)
+        assert re.fullmatch('[a-z0-9]{40}', claim_id)
+    except Exception:
+        return False
+    return True
 
-def validate_base_comment(comment: str, claim_id: str, **kwargs):
-    assert 0 < len(comment) <= 2000
-    assert re.fullmatch('[a-z0-9]{40}', claim_id)
+
+def is_valid_credential_input(channel_id=None, channel_name=None, signature=None, signing_ts=None, **kwargs):
+    if channel_name or channel_name or signature or signing_ts:
+        try:
+            assert channel_matches_pattern_or_error(channel_id, channel_name)
+            if signature or signing_ts:
+                assert len(signature) == 128
+                assert signing_ts.isalnum()
+        except Exception:
+            return False
+    return True
 
 
-async def is_authentic_delete_signal(app, comment_id: str, channel_name: str, channel_id: str, signature: str):
+async def is_authentic_delete_signal(app, comment_id, channel_name, channel_id, signature):
     claim = await resolve_channel_claim(app, channel_id, channel_name)
     if claim:
         public_key = claim['value']['public_key']

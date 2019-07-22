@@ -1,20 +1,20 @@
 # cython: language_level=3
 import logging
+import time
 
 import asyncio
 from aiohttp import web
 from aiojobs.aiohttp import atomic
-from asyncio import coroutine
 
-from misc import clean_input_params
+from src.misc import clean_input_params
 from src.database import get_claim_comments
 from src.database import get_comments_by_id, get_comment_ids
 from src.database import get_channel_id_from_comment_id
 from src.database import obtain_connection
-from src.database import delete_comment_by_id
-from src.writes import create_comment_or_error
-from src.misc import is_authentic_delete_signal
+from src.misc import is_valid_base_comment
+from src.misc import is_valid_credential_input
 from src.misc import make_error
+from writes import delete_comment_if_authorized, write_comment
 
 logger = logging.getLogger(__name__)
 
@@ -44,26 +44,12 @@ def handle_get_comments_by_id(app, kwargs):
         return get_comments_by_id(conn, **kwargs)
 
 
-async def write_comment(app, comment):
-    return await coroutine(create_comment_or_error)(app['writer'], **comment)
-
-
-async def delete_comment(app, comment_id):
-    return await coroutine(delete_comment_by_id)(app['writer'], comment_id)
-
-
 async def handle_create_comment(app, params):
-    job = await app['comment_scheduler'].spawn(write_comment(app, params))
-    return await job.wait()
-
-
-async def delete_comment_if_authorized(app, comment_id, channel_name, channel_id, signature):
-    authorized = await is_authentic_delete_signal(app, comment_id, channel_name, channel_id, signature)
-    if not authorized:
-        return {'deleted': False}
-
-    job = await app['comment_scheduler'].spawn(delete_comment(app, comment_id))
-    return {'deleted': await job.wait()}
+    if is_valid_base_comment(**params) and is_valid_credential_input(**params):
+        job = await app['comment_scheduler'].spawn(write_comment(app, params))
+        return await job.wait()
+    else:
+        raise ValueError('base comment is invalid')
 
 
 async def handle_delete_comment(app, params):
