@@ -122,3 +122,11 @@ async def api_endpoint(request: web.Request):
         logger.exception(f'Exception raised by request from {request.remote}: {e}')
         logger.debug(f'Request headers: {request.headers}')
         return make_error('INVALID_REQUEST', e)
+
+
+async def get_api_endpoint(request: web.Request):
+    return web.json_response({
+        'text': 'OK',
+        'is_running': True,
+        'uptime': int(time.time()) - request.app['START_TIME']
+    })

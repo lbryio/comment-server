@@ -10,7 +10,7 @@ from aiohttp import web
 
 import schema.db_helpers
 from src.database import obtain_connection, DatabaseWriter
-from src.handles import api_endpoint
+from src.handles import api_endpoint, get_api_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,11 @@ def create_app(conf, db_path='DEFAULT', **kwargs):
     app.on_shutdown.append(cleanup_background_tasks)
     app.on_shutdown.append(close_comment_scheduler)
     aiojobs.aiohttp.setup(app, **kwargs)
-    app.add_routes([web.post('/api', api_endpoint)])
+    app.add_routes([
+        web.post('/api', api_endpoint),
+        web.get('/', get_api_endpoint),
+        web.get('/api', get_api_endpoint)
+    ])
     return app
 
 
