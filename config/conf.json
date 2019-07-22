@@ -1,6 +1,6 @@
 {
   "PATH": {
-    "SCHEMA": "schema/comments_ddl.sql",
+    "SCHEMA": "src/schema/comments_ddl.sql",
     "MAIN": "database/comments.db",
     "BACKUP": "database/comments.backup.db",
     "DEFAULT": "database/default.db",

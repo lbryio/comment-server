@@ -123,7 +123,7 @@ class DatabaseTestCase(unittest.TestCase):
         super().setUp()
         if pathlib.Path(config['PATH']['TEST']).exists():
             teardown_database(config['PATH']['TEST'])
-        setup_database(config['PATH']['TEST'])
+        setup_database(config['PATH']['TEST'], config['PATH']['SCHEMA'])
         self.conn = obtain_connection(config['PATH']['TEST'])
 
     def tearDown(self) -> None:

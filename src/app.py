@@ -9,7 +9,7 @@ import aiojobs.aiohttp
 import asyncio
 from aiohttp import web
 
-import schema.db_helpers
+from src.schema.db_helpers import setup_database, backup_database
 from src.database import obtain_connection, DatabaseWriter
 from src.handles import api_endpoint, get_api_endpoint
 
@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 async def setup_db_schema(app):
     if not pathlib.Path(app['db_path']).exists():
         logger.info('Setting up schema in %s', app['db_path'])
-        schema.db_helpers.setup_database(app['db_path'])
+        setup_database(app['db_path'], app['config']['PATH']['SCHEMA'])
     else:
-        logger.info('Database already exists in %s, skipping setup', app['db_path'])
+        logger.info(f'Database already exists in {app["db_path"]}, skipping setup')
 
 
 async def close_comment_scheduler(app):
@@ -35,7 +35,7 @@ async def database_backup_routine(app):
             await asyncio.sleep(app['config']['BACKUP_INT'])
             with app['reader'] as conn:
                 logger.debug('backing up database')
-                schema.db_helpers.backup_database(conn, app['backup'])
+                backup_database(conn, app['backup'])
     except asyncio.CancelledError:
         pass
 

@@ -5,8 +5,9 @@ from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
 
-from src.database import get_comments_by_id, get_comment_ids, \
-    get_claim_comments
+from src.database import get_comments_by_id
+from src.database import get_comment_ids
+from src.database import get_claim_comments
 from src.writes import create_comment_or_error
 from tests.testcase import DatabaseTestCase
 
