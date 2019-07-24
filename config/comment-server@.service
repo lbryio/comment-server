@@ -4,7 +4,7 @@ PartOf=comment-server.target
 
 [Service]
 Type=simple
-User=oleg
+User=lbry
 WorkingDirectory=/home/lbry/comment-server/
 ExecStart=/home/lbry/comment-server/venv/bin/commentserv --port %i
 Restart=on-failure

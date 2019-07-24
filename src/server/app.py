@@ -105,7 +105,6 @@ def run_app(config):
     comment_app = CommentDaemon(config=config, db_path='DEFAULT', close_timeout=5.0)
 
     loop =  asyncio.get_event_loop()
-    loop.set_debug(True)
 
     def __exit():
         raise web.GracefulExit()
