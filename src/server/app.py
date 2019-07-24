@@ -11,8 +11,8 @@ import asyncio
 from aiohttp import web
 
 from src.schema.db_helpers import setup_database, backup_database
-from src.database import obtain_connection, DatabaseWriter
-from src.handles import api_endpoint, get_api_endpoint
+from src.server.database import obtain_connection, DatabaseWriter
+from src.server.handles import api_endpoint, get_api_endpoint
 
 logger = logging.getLogger(__name__)
 

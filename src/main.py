@@ -2,8 +2,7 @@ import logging.config
 import logging
 import os
 from src.settings import config
-
-from src.app import run_app
+from src.server.app import run_app
 
 
 def config_logging_from_settings(conf):
