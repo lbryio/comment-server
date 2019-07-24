@@ -63,8 +63,8 @@ METHODS = {
     'get_comments_by_id': handle_get_comments_by_id,
     'get_channel_from_comment_id': handle_get_channel_from_comment_id,
     'create_comment': handle_create_comment,
-    'delete_comment': handle_delete_comment,
-    'abandon_comment': handle_delete_comment,
+    # 'delete_comment': handle_delete_comment,
+    # 'abandon_comment': handle_delete_comment,
 }
 
 
