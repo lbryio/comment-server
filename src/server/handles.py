@@ -6,15 +6,15 @@ import asyncio
 from aiohttp import web
 from aiojobs.aiohttp import atomic
 
-from src.misc import clean_input_params
-from src.database import get_claim_comments
-from src.database import get_comments_by_id, get_comment_ids
-from src.database import get_channel_id_from_comment_id
-from src.database import obtain_connection
-from src.misc import is_valid_base_comment
-from src.misc import is_valid_credential_input
-from src.misc import make_error
-from src.writes import delete_comment_if_authorized, write_comment
+from src.server.misc import clean_input_params
+from src.server.database import get_claim_comments
+from src.server.database import get_comments_by_id, get_comment_ids
+from src.server.database import get_channel_id_from_comment_id
+from src.server.database import obtain_connection
+from src.server.misc import is_valid_base_comment
+from src.server.misc import is_valid_credential_input
+from src.server.misc import make_error
+from src.server.writes import delete_comment_if_authorized, write_comment
 
 logger = logging.getLogger(__name__)
 
@@ -25,22 +25,22 @@ def ping(*args):
 
 
 def handle_get_channel_from_comment_id(app, kwargs: dict):
-    with obtain_connection(app['db_path']) as conn:
+    with app['reader'] as conn:
         return get_channel_id_from_comment_id(conn, **kwargs)
 
 
 def handle_get_comment_ids(app, kwargs):
-    with obtain_connection(app['db_path']) as conn:
+    with app['reader'] as conn:
         return get_comment_ids(conn, **kwargs)
 
 
 def handle_get_claim_comments(app, kwargs):
-    with obtain_connection(app['db_path']) as conn:
+    with app['reader'] as conn:
         return get_claim_comments(conn, **kwargs)
 
 
 def handle_get_comments_by_id(app, kwargs):
-    with obtain_connection(app['db_path']) as conn:
+    with app['reader'] as conn:
         return get_comments_by_id(conn, **kwargs)
 
 

@@ -6,8 +6,8 @@ from unittest.case import _Outcome
 import asyncio
 
 from schema.db_helpers import setup_database, teardown_database
-from src.database import obtain_connection
-from src.settings import config
+from server.database import obtain_connection
+from settings import config
 
 
 class AsyncioTestCase(unittest.TestCase):

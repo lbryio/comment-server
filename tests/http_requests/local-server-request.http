@@ -4,7 +4,7 @@
 # * 'gtrp' and 'gtr' create a GET request with or without query parameters;
 # * 'ptr' and 'ptrp' create a POST request with a simple or parameter-like body;
 # * 'mptr' and 'fptr' create a POST request to submit a form with a text or file field (multipart/form-data);
-POST http://localhost:5921/api
+POST http://localhost:5922/api
 Content-Type: application/json
 
 {
@@ -12,8 +12,9 @@ Content-Type: application/json
   "id": null,
   "method": "get_claim_comments",
   "params": {
-    "claim_id": "6d266af6c25c80fa2ac6cc7662921ad2e90a07e8",
-    "page": 1
+    "claim_id": "6d266af6c25c80fa2ac6cc7662921ad2e90a07e7",
+    "page": 1,
+    "page_size": 100
   }
 }
 

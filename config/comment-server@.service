@@ -1,0 +1,15 @@
+[Unit]
+Description="LBRY Comment Server #%i"
+PartOf=comment-server.target
+
+[Service]
+Type=simple
+User=oleg
+WorkingDirectory=/home/lbry/comment-server/
+ExecStart=/home/lbry/comment-server/venv/bin/commentserv --port %i
+Restart=on-failure
+KillMode=process
+
+
+[Install]
+WantedBy=multi-user.target

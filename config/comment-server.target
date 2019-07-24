@@ -1,0 +1,8 @@
+[Unit]
+Description="LBRY Comment Server Watchdog"
+After=network.target
+Requires=comment-server@5921.service comment-server@5922.service comment-server@5923.service comment-server@5924.service
+
+
+[Install]
+WantedBy=multi-user.target

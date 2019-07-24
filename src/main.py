@@ -1,9 +1,10 @@
 import logging.config
 import logging
-import os
-from src.settings import config
+import argparse
+import sys
 
-from src.app import run_app
+from src.settings import config
+from src.server.app import run_app
 
 
 def config_logging_from_settings(conf):
@@ -69,7 +70,16 @@ def config_logging_from_settings(conf):
     logging.config.dictConfig(_config)
 
 
-if __name__ == '__main__':
+def main(argv=None):
+    argv = argv or sys.argv[1:]
+    parser = argparse.ArgumentParser(description='LBRY Comment Server')
+    parser.add_argument('--port', type=int)
+    args = parser.parse_args(argv)
+    if args.port:
+        config['PORT'] = args.port
     config_logging_from_settings(config)
-    logger = logging.getLogger(__name__)
     run_app(config)
+
+
+if __name__ == '__main__':
+    sys.exit(main())
