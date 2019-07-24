@@ -8,7 +8,7 @@ from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
 
-from src.settings import config
+from settings import config
 
 fake = faker.Faker()
 fake.add_provider(internet)
