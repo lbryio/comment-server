@@ -35,9 +35,7 @@ def make_error(error, exc=None) -> dict:
     body = ERRORS[error] if error in ERRORS else ERRORS['INTERNAL']
     try:
         if exc:
-            body.update({
-                type(exc).__name__: str(exc)
-            })
+            body.update({type(exc).__name__: str(exc)})
     finally:
         return body
 
@@ -112,12 +110,12 @@ def is_valid_credential_input(channel_id=None, channel_name=None, signature=None
     return True
 
 
-async def is_authentic_delete_signal(app, comment_id, channel_name, channel_id, signature):
+async def is_authentic_delete_signal(app, comment_id, channel_name, channel_id, signature, signing_ts):
     claim = await resolve_channel_claim(app, channel_id, channel_name)
     if claim:
         public_key = claim['value']['public_key']
         claim_hash = binascii.unhexlify(claim['claim_id'].encode())[::-1]
-        pieces_injest = b''.join((comment_id.encode(), claim_hash))
+        pieces_injest = b''.join((signing_ts.encode(), comment_id.encode(), claim_hash))
         return is_signature_valid(
             encoded_signature=get_encoded_signature(signature),
             signature_digest=hashlib.sha256(pieces_injest).digest(),
@@ -132,4 +130,3 @@ def clean_input_params(kwargs: dict):
             kwargs[k] = v.strip()
             if k in ID_LIST:
                 kwargs[k] = v.lower()
-

@@ -75,8 +75,8 @@ async def process_json(app, body: dict) -> dict:
         params = body.get('params', {})
         clean_input_params(params)
         logger.debug(f'Received Method {method}, params: {params}')
+        start = time.time()
         try:
-            start = time.time()
             if asyncio.iscoroutinefunction(METHODS[method]):
                 result = await METHODS[method](app, params)
             else:

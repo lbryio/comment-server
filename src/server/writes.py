@@ -38,8 +38,8 @@ async def delete_comment(app, comment_id):
     return await coroutine(delete_comment_by_id)(app['writer'], comment_id)
 
 
-async def delete_comment_if_authorized(app, comment_id, channel_name, channel_id, signature):
-    authorized = await is_authentic_delete_signal(app, comment_id, channel_name, channel_id, signature)
+async def delete_comment_if_authorized(app, comment_id, **kwargs):
+    authorized = await is_authentic_delete_signal(app, comment_id, **kwargs)
     if not authorized:
         return {'deleted': False}
 
