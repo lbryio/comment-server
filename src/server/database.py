@@ -125,14 +125,14 @@ def get_comment_ids(conn: sqlite3.Connection, claim_id: str, parent_id: str = No
             curs = conn.execute("""
                     SELECT comment_id FROM COMMENTS_ON_CLAIMS
                     WHERE claim_id = ? AND parent_id IS NULL LIMIT ? OFFSET ?
-                """, (claim_id, page_size, page_size*abs(page - 1),)
-                                           )
+                """, (claim_id, page_size, page_size * abs(page - 1),)
+                                )
         else:
             curs = conn.execute("""
                     SELECT comment_id FROM COMMENTS_ON_CLAIMS
                     WHERE claim_id = ? AND parent_id = ? LIMIT ? OFFSET ?
                 """, (claim_id, parent_id, page_size, page_size * abs(page - 1),)
-                                           )
+                                )
     return [tuple(row)[0] for row in curs.fetchall()]
 
 
@@ -175,7 +175,7 @@ def get_channel_id_from_comment_id(conn: sqlite3.Connection, comment_id: str):
         channel = conn.execute("""
             SELECT channel_id, channel_name FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?
         """, (comment_id,)
-        ).fetchone()
+                               ).fetchone()
         return dict(channel) if channel else dict()
 
 
