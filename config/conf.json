@@ -1,10 +1,7 @@
 {
   "PATH": {
     "SCHEMA": "src/schema/comments_ddl.sql",
-    "MAIN": "database/comments.db",
-    "BACKUP": "database/comments.backup.db",
-    "DEFAULT": "database/default.db",
-    "TEST": "tests/test.db",
+    "DATABASE": "database/comments.db",
     "ERROR_LOG": "logs/error.log",
     "DEBUG_LOG": "logs/debug.log",
     "SERVER_LOG": "logs/server.log"

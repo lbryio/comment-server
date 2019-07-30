@@ -1,6 +1,9 @@
+import atexit
+import os
 import unittest
 from multiprocessing.pool import Pool
-
+import asyncio
+import aiohttp
 import requests
 import re
 from itertools import *
@@ -10,7 +13,10 @@ from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
 
-from settings import config
+from src.settings import config
+from src.server import app
+from tests.testcase import AsyncioTestCase
+
 
 fake = faker.Faker()
 fake.add_provider(internet)
@@ -22,14 +28,15 @@ def fake_lbryusername():
     return '@' + fake.user_name()
 
 
-def jsonrpc_post(url, method, **params):
+async def jsonrpc_post(url, method, **params):
     json_body = {
         'jsonrpc': '2.0',
         'id': None,
         'method': method,
         'params': params
     }
-    return requests.post(url=url, json=json_body)
+    async with aiohttp.request('POST', url, json=json_body) as request:
+        return await request.json()
 
 
 def nothing():
@@ -52,19 +59,26 @@ def create_test_comments(values: iter, **default):
             for comb in vars_combo]
 
 
-class ServerTest(unittest.TestCase):
+class ServerTest(AsyncioTestCase):
+    db_file = 'test.db'
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.url = 'http://' + config['HOST'] + ':5921/api'
 
-    def post_comment(self, **params):
-        json_body = {
-            'jsonrpc': '2.0',
-            'id': None,
-            'method': 'create_comment',
-            'params': params
-        }
-        return requests.post(url=self.url, json=json_body)
+    @classmethod
+    def tearDownClass(cls) -> None:
+        print('exit reached')
+        os.remove(cls.db_file)
+
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
+        self.server = app.CommentDaemon(config, db_file=self.db_file)
+        await self.server.start()
+        self.addCleanup(self.server.stop)
+
+    async def post_comment(self, **params):
+        return await jsonrpc_post(self.url, 'create_comment', **params)
 
     def is_valid_message(self, comment=None, claim_id=None, parent_id=None,
                          channel_name=None, channel_id=None, signature=None, signing_ts=None):
@@ -89,9 +103,6 @@ class ServerTest(unittest.TestCase):
             return False
         return True
 
-    def setUp(self) -> None:
-        self.reply_id = 'ace7800f36e55c74c4aa6a698f97a7ee5f1ccb047b5a0730960df90e58c41dc2'
-
     @staticmethod
     def valid_channel_name(channel_name):
         return re.fullmatch(
@@ -100,7 +111,7 @@ class ServerTest(unittest.TestCase):
             channel_name
         )
 
-    def test01CreateCommentNoReply(self):
+    async def test01CreateCommentNoReply(self):
         anonymous_test = create_test_comments(
             ('claim_id', 'channel_id', 'channel_name', 'comment'),
             comment=None,
@@ -110,15 +121,14 @@ class ServerTest(unittest.TestCase):
         )
         for test in anonymous_test:
             with self.subTest(test=test):
-                message = self.post_comment(**test)
-                message = message.json()
+                message = await self.post_comment(**test)
                 self.assertTrue('result' in message or 'error' in message)
                 if 'error' in message:
                     self.assertFalse(self.is_valid_message(**test))
                 else:
                     self.assertTrue(self.is_valid_message(**test))
 
-    def test02CreateNamedCommentsNoReply(self):
+    async def test02CreateNamedCommentsNoReply(self):
         named_test = create_test_comments(
             ('channel_name', 'channel_id', 'signature'),
             claim_id='1234567890123456789012345678901234567890',
@@ -129,37 +139,35 @@ class ServerTest(unittest.TestCase):
         )
         for test in named_test:
             with self.subTest(test=test):
-                message = self.post_comment(**test)
-                message = message.json()
+                message = await self.post_comment(**test)
                 self.assertTrue('result' in message or 'error' in message)
                 if 'error' in message:
                     self.assertFalse(self.is_valid_message(**test))
                 else:
                     self.assertTrue(self.is_valid_message(**test))
 
-    def test03CreateAllTestComments(self):
+    async def test03CreateAllTestComments(self):
         test_all = create_test_comments(replace.keys(), **{
             k: None for k in replace.keys()
         })
         for test in test_all:
             with self.subTest(test=test):
-                message = self.post_comment(**test)
-                message = message.json()
+                message = await self.post_comment(**test)
                 self.assertTrue('result' in message or 'error' in message)
                 if 'error' in message:
                     self.assertFalse(self.is_valid_message(**test))
                 else:
                     self.assertTrue(self.is_valid_message(**test))
 
-    def test04CreateAllReplies(self):
+    async def test04CreateAllReplies(self):
         claim_id = '1d8a5cc39ca02e55782d619e67131c0a20843be8'
-        parent_comment = self.post_comment(
+        parent_comment = await self.post_comment(
             channel_name='@KevinWalterRabie',
             channel_id=fake.sha1(),
             comment='Hello everybody and welcome back to my chan nel',
             claim_id=claim_id,
         )
-        parent_id = parent_comment.json()['result']['comment_id']
+        parent_id = parent_comment['result']['comment_id']
         test_all = create_test_comments(
             ('comment', 'channel_name', 'channel_id', 'signature', 'parent_id'),
             parent_id=parent_id,
@@ -174,8 +182,7 @@ class ServerTest(unittest.TestCase):
                 if test['parent_id'] != parent_id:
                     continue
                 else:
-                    message = self.post_comment(**test)
-                    message = message.json()
+                    message = await self.post_comment(**test)
                     self.assertTrue('result' in message or 'error' in message)
                     if 'error' in message:
                         self.assertFalse(self.is_valid_message(**test))
@@ -183,7 +190,7 @@ class ServerTest(unittest.TestCase):
                         self.assertTrue(self.is_valid_message(**test))
 
 
-class ListCommentsTest(unittest.TestCase):
+class ListCommentsTest(AsyncioTestCase):
     replace = {
         'claim_id': fake.sha1,
         'comment': fake.text,
@@ -192,30 +199,35 @@ class ListCommentsTest(unittest.TestCase):
         'signature': nothing,
         'parent_id': nothing
     }
+    db_file = 'list_test.db'
+    url = 'http://localhost:5921/api'
+    comment_ids = None
+    claim_id = '1d8a5cc39ca02e55782d619e67131c0a20843be8'
 
     @classmethod
-    def post_comment(cls, **params):
-        json_body = {
-            'jsonrpc': '2.0',
-            'id': None,
-            'method': 'create_comment',
-            'params': params
-        }
-        return requests.post(url=cls.url, json=json_body)
+    async def post_comment(cls, **params):
+        return await jsonrpc_post(cls.url, 'create_comment', **params)
 
     @classmethod
-    def setUpClass(cls) -> None:
-        cls.url = 'http://' + config['HOST'] + ':5921/api'
-        cls.claim_id = '1d8a5cc39ca02e55782d619e67131c0a20843be8'
-        cls.comment_list = [{key: cls.replace[key]() for key in cls.replace.keys()} for _ in range(23)]
-        for comment in cls.comment_list:
-            comment['claim_id'] = cls.claim_id
-        cls.comment_ids = [cls.post_comment(**comm).json()['result']['comment_id']
-                           for comm in cls.comment_list]
+    def tearDownClass(cls) -> None:
+        print('exit reached')
+        os.remove(cls.db_file)
 
-    def testListComments(self):
-        response_one = jsonrpc_post(self.url, 'get_claim_comments', page_size=20,
-                                    page=1, top_level=1, claim_id=self.claim_id).json()
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
+        self.server = app.CommentDaemon(config, db_file=self.db_file)
+        await self.server.start()
+        self.addCleanup(self.server.stop)
+        if self.comment_ids is None:
+            self.comment_list = [{key: self.replace[key]() for key in self.replace.keys()} for _ in range(23)]
+            for comment in self.comment_list:
+                comment['claim_id'] = self.claim_id
+            self.comment_ids = [(await self.post_comment(**comm))['result']['comment_id']
+                                for comm in self.comment_list]
+
+    async def testListComments(self):
+        response_one = await jsonrpc_post(self.url, 'get_claim_comments', page_size=20,
+                                    page=1, top_level=1, claim_id=self.claim_id)
         self.assertIsNotNone(response_one)
         self.assertIn('result', response_one)
         response_one: dict = response_one['result']
@@ -224,40 +236,11 @@ class ListCommentsTest(unittest.TestCase):
         self.assertIn('items', response_one)
         self.assertGreaterEqual(response_one['total_pages'], response_one['page'])
         last_page = response_one['total_pages']
-        response = jsonrpc_post(self.url, 'get_claim_comments', page_size=20,
-                                page=last_page, top_level=1, claim_id=self.claim_id).json()
+        response = await jsonrpc_post(self.url, 'get_claim_comments', page_size=20,
+                                page=last_page, top_level=1, claim_id=self.claim_id)
         self.assertIsNotNone(response)
         self.assertIn('result', response)
         response: dict = response['result']
         self.assertIs(type(response['items']), list)
         self.assertEqual(response['total_items'], response_one['total_items'])
         self.assertEqual(response['total_pages'], response_one['total_pages'])
-
-
-class ConcurrentWriteTest(unittest.TestCase):
-    @staticmethod
-    def make_comment(num):
-        return {
-            'jsonrpc': '2.0',
-            'id': num,
-            'method': 'create_comment',
-            'params': {
-                'comment': f'Comment #{num}',
-                'claim_id': '6d266af6c25c80fa2ac6cc7662921ad2e90a07e7',
-            }
-        }
-
-    @staticmethod
-    def send_comment_to_server(params):
-        with requests.post(params[0], json=params[1]) as req:
-            return req.json()
-
-    def test01Concurrency(self):
-        urls = [f'http://localhost:{port}/api' for port in range(5921, 5925)]
-        comments = [self.make_comment(i) for i in range(1, 5)]
-        inputs = list(zip(urls, comments))
-        with Pool(4) as pool:
-            results = pool.map(self.send_comment_to_server, inputs)
-        results = list(filter(lambda x: 'comment_id' in x['result'], results))
-        self.assertIsNotNone(results)
-        self.assertEqual(len(results), len(inputs))

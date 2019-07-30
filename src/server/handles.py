@@ -10,7 +10,6 @@ from src.server.misc import clean_input_params
 from src.server.database import get_claim_comments
 from src.server.database import get_comments_by_id, get_comment_ids
 from src.server.database import get_channel_id_from_comment_id
-from src.server.database import obtain_connection
 from src.server.misc import is_valid_base_comment
 from src.server.misc import is_valid_credential_input
 from src.server.misc import make_error
@@ -63,7 +62,7 @@ METHODS = {
     'get_comments_by_id': handle_get_comments_by_id,
     'get_channel_from_comment_id': handle_get_channel_from_comment_id,
     'create_comment': handle_create_comment,
-    # 'delete_comment': handle_delete_comment,
+    'delete_comment': handle_delete_comment,
     # 'abandon_comment': handle_delete_comment,
 }
 
@@ -75,8 +74,8 @@ async def process_json(app, body: dict) -> dict:
         params = body.get('params', {})
         clean_input_params(params)
         logger.debug(f'Received Method {method}, params: {params}')
+        start = time.time()
         try:
-            start = time.time()
             if asyncio.iscoroutinefunction(METHODS[method]):
                 result = await METHODS[method](app, params)
             else:
@@ -99,6 +98,7 @@ async def process_json(app, body: dict) -> dict:
 @atomic
 async def api_endpoint(request: web.Request):
     try:
+        web.access_logger.info(f'Forwarded headers: {request.forwarded}')
         body = await request.json()
         if type(body) is list or type(body) is dict:
             if type(body) is list:
@@ -109,8 +109,6 @@ async def api_endpoint(request: web.Request):
             else:
                 return web.json_response(await process_json(request.app, body))
     except Exception as e:
-        logger.exception(f'Exception raised by request from {request.remote}: {e}')
-        logger.debug(f'Request headers: {request.headers}')
         return make_error('INVALID_REQUEST', e)
 
 

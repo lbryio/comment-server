@@ -1,3 +1,4 @@
+import os
 import pathlib
 import unittest
 from asyncio.runners import _cancel_all_tasks  # type: ignore
@@ -119,15 +120,20 @@ class AsyncioTestCase(unittest.TestCase):
 
 
 class DatabaseTestCase(unittest.TestCase):
+    db_file = 'test.db'
+
+    def __init__(self, methodName='DatabaseTest'):
+        super().__init__(methodName)
+        if pathlib.Path(self.db_file).exists():
+            os.remove(self.db_file)
+
     def setUp(self) -> None:
         super().setUp()
-        if pathlib.Path(config['PATH']['TEST']).exists():
-            teardown_database(config['PATH']['TEST'])
-        setup_database(config['PATH']['TEST'], config['PATH']['SCHEMA'])
-        self.conn = obtain_connection(config['PATH']['TEST'])
+        setup_database(self.db_file, config['PATH']['SCHEMA'])
+        self.conn = obtain_connection(self.db_file)
+        self.addCleanup(self.conn.close)
+        self.addCleanup(os.remove, self.db_file)
 
     def tearDown(self) -> None:
         self.conn.close()
-        teardown_database(config['PATH']['TEST'])
-
 

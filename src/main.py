@@ -17,7 +17,7 @@ def config_logging_from_settings(conf):
                 "datefmt": conf['LOGGING']['DATEFMT']
             },
             "aiohttp": {
-                "format":  conf['LOGGING']['AIOHTTP_FORMAT'],
+                "format": conf['LOGGING']['AIOHTTP_FORMAT'],
                 "datefmt": conf['LOGGING']['DATEFMT']
             }
         },
@@ -75,6 +75,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description='LBRY Comment Server')
     parser.add_argument('--port', type=int)
     args = parser.parse_args(argv)
+    config_logging_from_settings(config)
     if args.port:
         config['PORT'] = args.port
     config_logging_from_settings(config)

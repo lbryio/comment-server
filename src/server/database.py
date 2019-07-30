@@ -31,14 +31,14 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
                     FROM COMMENTS_ON_CLAIMS 
                     WHERE claim_id = ? AND parent_id IS NULL
                     LIMIT ? OFFSET ? """,
-                (claim_id, page_size, page_size*(page - 1))
+                (claim_id, page_size, page_size * (page - 1))
             )]
             count = conn.execute(
                 """
                 SELECT COUNT(*)
                 FROM COMMENTS_ON_CLAIMS
                 WHERE claim_id = ? AND parent_id IS NULL
-                """, (claim_id, )
+                """, (claim_id,)
             )
         elif parent_id is None:
             results = [clean(dict(row)) for row in conn.execute(
@@ -47,7 +47,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
                     FROM COMMENTS_ON_CLAIMS 
                     WHERE claim_id = ? 
                     LIMIT ? OFFSET ? """,
-                (claim_id, page_size, page_size*(page - 1))
+                (claim_id, page_size, page_size * (page - 1))
             )]
             count = conn.execute(
                 """
@@ -63,7 +63,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
                     FROM COMMENTS_ON_CLAIMS 
                     WHERE claim_id = ? AND parent_id = ?
                     LIMIT ? OFFSET ? """,
-                (claim_id, parent_id, page_size, page_size*(page - 1))
+                (claim_id, parent_id, page_size, page_size * (page - 1))
             )]
             count = conn.execute(
                 """
@@ -77,7 +77,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
             'items': results,
             'page': page,
             'page_size': page_size,
-            'total_pages': math.ceil(count/page_size),
+            'total_pages': math.ceil(count / page_size),
             'total_items': count
         }
 
@@ -194,8 +194,8 @@ class DatabaseWriter(object):
 
     def cleanup(self):
         logging.info('Cleaning up database writer')
-        DatabaseWriter._writer = None
         self.conn.close()
+        DatabaseWriter._writer = None
 
     @property
     def connection(self):
