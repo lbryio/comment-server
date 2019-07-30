@@ -2,7 +2,6 @@
 import json
 import pathlib
 
-
 root_dir = pathlib.Path(__file__).parent.parent
 config_path = root_dir / 'config' / 'conf.json'
 

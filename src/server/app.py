@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 async def setup_db_schema(app):
-
     if not pathlib.Path(app['db_path']).exists():
         logger.info('Setting up schema in %s', app['db_path'])
         setup_database(app['db_path'], app['config']['PATH']['SCHEMA'])

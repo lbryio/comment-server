@@ -17,7 +17,7 @@ def config_logging_from_settings(conf):
                 "datefmt": conf['LOGGING']['DATEFMT']
             },
             "aiohttp": {
-                "format":  conf['LOGGING']['AIOHTTP_FORMAT'],
+                "format": conf['LOGGING']['AIOHTTP_FORMAT'],
                 "datefmt": conf['LOGGING']['DATEFMT']
             }
         },
