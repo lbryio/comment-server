@@ -4,22 +4,17 @@ This is the code for the LBRY Comment Server.
 Fork it, run it, set it on fire. Up to you.
 
 
-## Prerequisites 
-In order to run the comment server properly, you will need the 
-following: 
+## Before Installing
+
+Comment Deletion requires having the [`lbry-sdk`](https://github.com/lbryio/lbry-sdk) 
+in order to validate & properly delete comments. 
+
+
  
- 0. A Unix Compliant Operating System (e.g: Ubuntu, RedHat, Hannah Montana, etc.) 
- 1. Any recent version of Sqlite3
- 2. Python 3.6+ (including `python3-dev`, `python3-virtualenv`, `python3-pip`)
-    Note: You must specify the specific python version you're using,
-    e.g. for Python3.6, you would install `python36-dev`. You're smart enough to figure the rest out from here ;)
- 3. (Optional) Reverse Proxy software to handle a public-facing API. 
-    We recommend Caddy, though there is an `nginx.conf` file under `config`.
- 5. Patience (Strongly recommended but often neglected)
  
 ## Installation
 
-Installing the server:
+#### Installing the server:
 ```bash
 
 $ git clone https://github.com/osilkin98/comment-server
@@ -31,21 +26,33 @@ $ virtualenv --python=python3 venv
 # Enter the virtual environment
 $ source venv/bin/activate
 
-# install the library dependencies
-(venv) $ pip install -r requirements.txt
+# install the Server as a Executable Target
+(venv) $ python setup.py develop
 ```
+
+### Installing the systemd Service Monitor
+
+As a super-user, copy the .service and .target files to the systemd directory: 
+```bash 
+$ sudo comment-server/config/comment-server* /etc/systemd/system
+```
+Then `$ sudo systemctl daemon-reload` to refresh the systemd service files.
+
+
 
 ## Usage
 
 ### Running the Server
 To start the server, simply run:
 ```bash
-# to enter server's venv
-$ source venv/bin/activate
-
-# To start server as daemon process
-(venv) $ python -m main &  
+$ sudo systemctl start comment-server.target
 ```
+
+(Optional) Enable the server to run on booting:
+```bash
+$ sudo systemctl enable --now comment-server.target
+```
+
 
 ### Testing
 
