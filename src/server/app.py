@@ -1,7 +1,6 @@
 # cython: language_level=3
 import logging
 import pathlib
-import re
 import signal
 import time
 

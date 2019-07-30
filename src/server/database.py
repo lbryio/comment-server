@@ -194,8 +194,8 @@ class DatabaseWriter(object):
 
     def cleanup(self):
         logging.info('Cleaning up database writer')
-        DatabaseWriter._writer = None
         self.conn.close()
+        DatabaseWriter._writer = None
 
     @property
     def connection(self):

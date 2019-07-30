@@ -10,7 +10,6 @@ from src.server.misc import clean_input_params
 from src.server.database import get_claim_comments
 from src.server.database import get_comments_by_id, get_comment_ids
 from src.server.database import get_channel_id_from_comment_id
-from src.server.database import obtain_connection
 from src.server.misc import is_valid_base_comment
 from src.server.misc import is_valid_credential_input
 from src.server.misc import make_error
@@ -63,7 +62,7 @@ METHODS = {
     'get_comments_by_id': handle_get_comments_by_id,
     'get_channel_from_comment_id': handle_get_channel_from_comment_id,
     'create_comment': handle_create_comment,
-    # 'delete_comment': handle_delete_comment,
+    'delete_comment': handle_delete_comment,
     # 'abandon_comment': handle_delete_comment,
 }
 
