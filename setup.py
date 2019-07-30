@@ -5,7 +5,7 @@ ROOT = os.path.dirname(__name__)
 
 setup(
     name='CommentServer',
-    version='0.0.1',
+    version='0.0.2',
     packages=find_packages(exclude=('tests',)),
     entry_points={
         'console_scripts': 'commentserv=src.main:main'
