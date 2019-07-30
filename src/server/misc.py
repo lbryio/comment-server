@@ -115,7 +115,7 @@ async def is_authentic_delete_signal(app, comment_id, channel_name, channel_id, 
     if claim:
         public_key = claim['value']['public_key']
         claim_hash = binascii.unhexlify(claim['claim_id'].encode())[::-1]
-        pieces_injest = b''.join((signing_ts.encode(), comment_id.encode(), claim_hash))
+        pieces_injest = b''.join((signing_ts.encode(), claim_hash, comment_id.encode()))
         return is_signature_valid(
             encoded_signature=get_encoded_signature(signature),
             signature_digest=hashlib.sha256(pieces_injest).digest(),
