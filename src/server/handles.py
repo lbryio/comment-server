@@ -99,6 +99,7 @@ async def process_json(app, body: dict) -> dict:
 @atomic
 async def api_endpoint(request: web.Request):
     try:
+        web.access_logger.info(f'Forwarded headers: {request.forwarded}')
         body = await request.json()
         if type(body) is list or type(body) is dict:
             if type(body) is list:
@@ -109,8 +110,6 @@ async def api_endpoint(request: web.Request):
             else:
                 return web.json_response(await process_json(request.app, body))
     except Exception as e:
-        logger.exception(f'Exception raised by request from {request.remote}: {e}')
-        logger.debug(f'Request headers: {request.headers}')
         return make_error('INVALID_REQUEST', e)
 
 

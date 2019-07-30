@@ -7,6 +7,7 @@ import hashlib
 import aiohttp
 
 import ecdsa
+from aiohttp import ClientConnectorError
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.serialization import load_der_public_key
 from cryptography.hazmat.primitives import hashes
@@ -20,7 +21,7 @@ ID_LIST = {'claim_id', 'parent_id', 'comment_id', 'channel_id'}
 
 ERRORS = {
     'INVALID_PARAMS': {'code': -32602, 'message': 'Invalid Method Parameter(s).'},
-    'INTERNAL': {'code': -32603, 'message': 'Internal Server Error.'},
+    'INTERNAL': {'code': -32603, 'message': 'Internal Server Error. Please notify a LBRY Administrator.'},
     'METHOD_NOT_FOUND': {'code': -32601, 'message': 'The method does not exist / is not available.'},
     'INVALID_REQUEST': {'code': -32600, 'message': 'The JSON sent is not a valid Request object.'},
     'PARSE_ERROR': {
@@ -42,22 +43,21 @@ def make_error(error, exc=None) -> dict:
 
 async def resolve_channel_claim(app, channel_id, channel_name):
     lbry_url = f'lbry://{channel_name}#{channel_id}'
-    resolve_body = {
-        'method': 'resolve',
-        'params': {
-            'urls': [lbry_url, ]
-        }
-    }
-    async with aiohttp.request('POST', app['config']['LBRYNET'], json=resolve_body) as req:
-        try:
-            resp = await req.json()
-        except JSONDecodeError as jde:
-            logger.exception(jde.msg)
-            raise Exception('JSON Decode Error in Claim Resolution')
-        finally:
-            if 'result' in resp:
-                return resp['result'].get(lbry_url)
-            raise ValueError('claim resolution yields error', {'error': resp['error']})
+    resolve_body = {'method': 'resolve', 'params': {'urls': [lbry_url]}}
+    try:
+        async with aiohttp.request('POST', app['config']['LBRYNET'], json=resolve_body) as req:
+            try:
+                resp = await req.json()
+            except JSONDecodeError as jde:
+                logger.exception(jde.msg)
+                raise Exception('JSON Decode Error in Claim Resolution')
+            finally:
+                if 'result' in resp:
+                    return resp['result'].get(lbry_url)
+                raise ValueError('claim resolution yields error', {'error': resp['error']})
+    except (ConnectionRefusedError, ClientConnectorError):
+        logger.critical("Connection to the LBRYnet daemon failed, make sure it's running.")
+        raise Exception("Server cannot verify delete signature")
 
 
 def get_encoded_signature(signature):
@@ -83,8 +83,8 @@ def is_signature_valid(encoded_signature, signature_digest, public_key_bytes):
         public_key = load_der_public_key(public_key_bytes, default_backend())
         public_key.verify(encoded_signature, signature_digest, ec.ECDSA(Prehashed(hashes.SHA256())))
         return True
-    except (ValueError, InvalidSignature) as err:
-        logger.debug('Signature Valiadation Failed: %s', err)
+    except (ValueError, InvalidSignature):
+        logger.exception('Signature validation failed')
     return False
 
 
