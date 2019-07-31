@@ -7,13 +7,13 @@ from aiohttp import web
 from aiojobs.aiohttp import atomic
 
 from src.server.misc import clean_input_params
-from src.server.database import get_claim_comments
-from src.server.database import get_comments_by_id, get_comment_ids
-from src.server.database import get_channel_id_from_comment_id
+from database.queries import get_claim_comments
+from database.queries import get_comments_by_id, get_comment_ids
+from database.queries import get_channel_id_from_comment_id
 from src.server.misc import is_valid_base_comment
 from src.server.misc import is_valid_credential_input
 from src.server.misc import make_error
-from src.server.writes import delete_comment_if_authorized, write_comment
+from database.writes import delete_comment_if_authorized, write_comment
 
 logger = logging.getLogger(__name__)
 

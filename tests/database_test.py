@@ -5,10 +5,10 @@ from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
 
-from server.database import get_comments_by_id
-from server.database import get_comment_ids
-from server.database import get_claim_comments
-from server.writes import create_comment_or_error
+from database.queries import get_comments_by_id
+from database.queries import get_comment_ids
+from database.queries import get_claim_comments
+from database.writes import create_comment_or_error
 from tests.testcase import DatabaseTestCase
 
 fake = faker.Faker()
@@ -139,6 +139,7 @@ class TestCommentCreation(DatabaseTestCase):
         )
 
     def test05InsertRandomComments(self):
+        # TODO: Fix this test into something practical
         self.skipTest('This is a bad test')
         top_comments, claim_ids = generate_top_comments_random()
         total = 0
@@ -165,6 +166,7 @@ class TestCommentCreation(DatabaseTestCase):
         del claim_ids
 
     def test06GenerateAndListComments(self):
+        # TODO: Make this test not suck
         self.skipTest('this is a stupid test')
         top_comments, claim_ids = generate_top_comments()
         total, success = 0, 0
@@ -197,8 +199,6 @@ class ListDatabaseTest(DatabaseTestCase):
         top_coms, self.claim_ids = generate_top_comments(5, 75)
 
     def testLists(self):
-        self.skipTest('Populating a database each time is not a good way to test listing')
-
         for claim_id in self.claim_ids:
             with self.subTest(claim_id=claim_id):
                 comments = get_claim_comments(self.conn, claim_id)

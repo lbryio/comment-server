@@ -1,10 +1,10 @@
 PRAGMA FOREIGN_KEYS = ON;
 
--- tables
--- DROP TABLE IF EXISTS COMMENT;
--- DROP TABLE IF EXISTS CHANNEL;
+-- Although I know this file is unnecessary, I like keeping it around.
 
--- DROP TABLE IF EXISTS COMMENT;
+-- I'm not gonna remove it.
+
+-- tables
 CREATE TABLE IF NOT EXISTS COMMENT
 (
     CommentId   TEXT    NOT NULL,
@@ -42,7 +42,6 @@ CREATE INDEX IF NOT EXISTS CLAIM_COMMENT_INDEX ON COMMENT (LbryClaimId, CommentI
 CREATE INDEX IF NOT EXISTS CHANNEL_COMMENT_INDEX ON COMMENT (ChannelId, CommentId);
 
 -- VIEWS
-DROP VIEW IF EXISTS COMMENTS_ON_CLAIMS;
 CREATE VIEW IF NOT EXISTS COMMENTS_ON_CLAIMS (comment_id, claim_id, timestamp, channel_name, channel_id, channel_url,
                                               signature, signing_ts, parent_id, comment) AS
 SELECT C.CommentId,

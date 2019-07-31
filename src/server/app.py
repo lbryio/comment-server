@@ -9,8 +9,8 @@ import aiojobs.aiohttp
 import asyncio
 from aiohttp import web
 
-from src.schema.db_helpers import setup_database, backup_database
-from src.server.database import obtain_connection, DatabaseWriter
+from database.queries import setup_database, backup_database
+from database.queries import obtain_connection, DatabaseWriter
 from src.server.handles import api_endpoint, get_api_endpoint
 
 logger = logging.getLogger(__name__)
@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 async def setup_db_schema(app):
     if not pathlib.Path(app['db_path']).exists():
-        logger.info('Setting up schema in %s', app['db_path'])
-        setup_database(app['db_path'], app['config']['PATH']['SCHEMA'])
+        logger.info(f'Setting up schema in {app["db_path"]}')
+        setup_database(app['db_path'])
     else:
         logger.info(f'Database already exists in {app["db_path"]}, skipping setup')
 

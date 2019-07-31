@@ -3,12 +3,12 @@ import sqlite3
 
 from asyncio import coroutine
 
-from src.server.database import delete_comment_by_id
+from database.queries import delete_comment_by_id
 from src.server.misc import is_authentic_delete_signal
 
-from src.server.database import get_comment_or_none
-from src.server.database import insert_comment
-from src.server.database import insert_channel
+from database.queries import get_comment_or_none
+from database.queries import insert_comment
+from database.queries import insert_channel
 from src.server.misc import channel_matches_pattern_or_error
 
 logger = logging.getLogger(__name__)

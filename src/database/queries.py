@@ -7,6 +7,8 @@ import typing
 import math
 import nacl.hash
 
+from src.database.schema import CREATE_TABLES_QUERY
+
 logger = logging.getLogger(__name__)
 
 
@@ -200,3 +202,13 @@ class DatabaseWriter(object):
     @property
     def connection(self):
         return self.conn
+
+
+def setup_database(db_path):
+    with sqlite3.connect(db_path) as conn:
+        conn.executescript(CREATE_TABLES_QUERY)
+
+
+def backup_database(conn: sqlite3.Connection, back_fp):
+    with sqlite3.connect(back_fp) as back:
+        conn.backup(back)

@@ -6,9 +6,7 @@ from unittest.case import _Outcome
 
 import asyncio
 
-from schema.db_helpers import setup_database, teardown_database
-from server.database import obtain_connection
-from settings import config
+from database.queries import obtain_connection, setup_database
 
 
 class AsyncioTestCase(unittest.TestCase):
@@ -129,7 +127,7 @@ class DatabaseTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
         super().setUp()
-        setup_database(self.db_file, config['PATH']['SCHEMA'])
+        setup_database(self.db_file)
         self.conn = obtain_connection(self.db_file)
         self.addCleanup(self.conn.close)
         self.addCleanup(os.remove, self.db_file)
