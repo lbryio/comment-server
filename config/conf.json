@@ -1,6 +1,5 @@
 {
   "PATH": {
-    "SCHEMA": "src/schema/comments_ddl.sql",
     "DATABASE": "database/comments.db",
     "ERROR_LOG": "logs/error.log",
     "DEBUG_LOG": "logs/debug.log",
