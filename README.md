@@ -1,5 +1,7 @@
 # LBRY Comment Server
 
+[![Maintainability](https://api.codeclimate.com/v1/badges/22f420b8b5f2373fd885/maintainability)](https://codeclimate.com/github/lbryio/comment-server/maintainability)  
+
 This is the code for the LBRY Comment Server. 
 Fork it, run it, set it on fire. Up to you.
 
