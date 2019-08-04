@@ -73,7 +73,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
         }
 
 
-def get_hidden_claim_comments(conn: sqlite3.Connection, claim_id: str, hidden=True, page=1, page_size=50):
+def get_claim_hidden_comments(conn: sqlite3.Connection, claim_id: str, hidden=True, page=1, page_size=50):
     with conn:
         results = conn.execute(
             SELECT_COMMENTS_ON_CLAIMS + "WHERE claim_id = ? AND is_hidden = ? LIMIT ? OFFSET ?",

@@ -10,7 +10,7 @@ from src.server.misc import clean_input_params
 from src.database.queries import get_claim_comments
 from src.database.queries import get_comments_by_id, get_comment_ids
 from src.database.queries import get_channel_id_from_comment_id
-from src.database.queries import get_hidden_claim_comments
+from src.database.queries import get_claim_hidden_comments
 from src.server.misc import is_valid_base_comment
 from src.server.misc import is_valid_credential_input
 from src.server.misc import make_error
@@ -43,8 +43,8 @@ def handle_get_comments_by_id(app, kwargs):
     return get_comments_by_id(app['reader'], **kwargs)
 
 
-def handle_get_hidden_claim_comments(app, kwargs):
-    return get_hidden_claim_comments(app['reader'], **kwargs)
+def handle_get_claim_hidden_comments(app, kwargs):
+    return get_claim_hidden_comments(app['reader'], **kwargs)
 
 
 async def handle_create_comment(app, params):
@@ -66,7 +66,7 @@ async def handle_hide_comment(app, params):
 METHODS = {
     'ping': ping,
     'get_claim_comments': handle_get_claim_comments,
-    'get_hidden_claim_comments': handle_get_hidden_claim_comments,
+    'get_claim_hidden_comments': handle_get_claim_hidden_comments,
     'get_comment_ids': handle_get_comment_ids,
     'get_comments_by_id': handle_get_comments_by_id,
     'get_channel_from_comment_id': handle_get_channel_from_comment_id,

@@ -8,7 +8,7 @@ from faker.providers import misc
 from src.database.queries import get_comments_by_id
 from src.database.queries import get_comment_ids
 from src.database.queries import get_claim_comments
-from src.database.queries import get_hidden_claim_comments
+from src.database.queries import get_claim_hidden_comments
 from src.database.writes import create_comment_or_error
 from src.database.queries import hide_comment_by_id
 from src.database.queries import delete_comment_by_id
@@ -263,17 +263,17 @@ class ListDatabaseTest(DatabaseTestCase):
         self.assertFalse(comment_list['has_hidden_comments'])
         hide_comment_by_id(self.conn, comm2['comment_id'])
 
-        default_comments = get_hidden_claim_comments(self.conn, claim_id)
+        default_comments = get_claim_hidden_comments(self.conn, claim_id)
         self.assertIn('has_hidden_comments', default_comments)
 
-        hidden_comments = get_hidden_claim_comments(self.conn, claim_id, hidden=True)
+        hidden_comments = get_claim_hidden_comments(self.conn, claim_id, hidden=True)
         self.assertIn('has_hidden_comments', hidden_comments)
         self.assertEqual(default_comments, hidden_comments)
 
         hidden_comment = hidden_comments['items'][0]
         self.assertEqual(hidden_comment['comment_id'], comm2['comment_id'])
 
-        visible_comments = get_hidden_claim_comments(self.conn, claim_id, hidden=False)
+        visible_comments = get_claim_hidden_comments(self.conn, claim_id, hidden=False)
         self.assertIn('has_hidden_comments', visible_comments)
         self.assertNotIn(hidden_comment, visible_comments['items'])
 
