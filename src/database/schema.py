@@ -6,12 +6,13 @@ CREATE_COMMENT_TABLE = """
     CREATE TABLE IF NOT EXISTS COMMENT (
         CommentId   TEXT    NOT NULL,
         LbryClaimId TEXT    NOT NULL,
-        ChannelId   TEXT DEFAULT NULL,
+        ChannelId   TEXT                DEFAULT NULL,
         Body        TEXT    NOT NULL,
-        ParentId    TEXT DEFAULT NULL,
-        Signature   TEXT DEFAULT NULL,
+        ParentId    TEXT                DEFAULT NULL,
+        Signature   TEXT                DEFAULT NULL,
         Timestamp   INTEGER NOT NULL,
-        SigningTs   TEXT DEFAULT NULL,
+        SigningTs   TEXT                DEFAULT NULL,
+        IsHidden    BOOLEAN NOT NULL    DEFAULT (FALSE),
         CONSTRAINT COMMENT_PRIMARY_KEY PRIMARY KEY (CommentId) ON CONFLICT IGNORE,
         CONSTRAINT COMMENT_SIGNATURE_SK UNIQUE (Signature) ON CONFLICT ABORT,
         CONSTRAINT COMMENT_CHANNEL_FK FOREIGN KEY (ChannelId) REFERENCES CHANNEL (ClaimId)
@@ -46,7 +47,8 @@ CREATE_COMMENTS_ON_CLAIMS_VIEW = """
         ('lbry://' || CHAN.Name || '#' || CHAN.ClaimId) AS channel_url,
         C.Signature AS signature,
         C.SigningTs AS signing_ts,
-        C.ParentId AS parent_id
+        C.ParentId AS parent_id,
+        C.IsHidden as is_hidden
     FROM COMMENT AS C
              LEFT OUTER JOIN CHANNEL CHAN ON C.ChannelId = CHAN.ClaimId
     ORDER BY C.Timestamp DESC;

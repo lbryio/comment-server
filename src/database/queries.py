@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 def clean(thing: dict) -> dict:
+    if 'is_hidden' in thing:
+        thing.update({'is_hidden': bool(thing['is_hidden'])})
     return {k: v for k, v in thing.items() if v}
 
 
@@ -29,7 +31,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
         if top_level:
             results = [clean(dict(row)) for row in conn.execute(
                 """ SELECT comment, comment_id, channel_name, channel_id, 
-                        channel_url, timestamp, signature, signing_ts, parent_id
+                        channel_url, timestamp, signature, signing_ts, parent_id, is_hidden
                     FROM COMMENTS_ON_CLAIMS 
                     WHERE claim_id = ? AND parent_id IS NULL
                     LIMIT ? OFFSET ? """,
@@ -45,7 +47,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
         elif parent_id is None:
             results = [clean(dict(row)) for row in conn.execute(
                 """ SELECT comment, comment_id, channel_name, channel_id, 
-                        channel_url, timestamp, signature, signing_ts, parent_id
+                        channel_url, timestamp, signature, signing_ts, parent_id, is_hidden
                     FROM COMMENTS_ON_CLAIMS 
                     WHERE claim_id = ? 
                     LIMIT ? OFFSET ? """,
@@ -61,7 +63,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
         else:
             results = [clean(dict(row)) for row in conn.execute(
                 """ SELECT comment, comment_id, channel_name, channel_id, 
-                        channel_url, timestamp, signature, signing_ts, parent_id
+                        channel_url, timestamp, signature, signing_ts, parent_id, is_hidden
                     FROM COMMENTS_ON_CLAIMS 
                     WHERE claim_id = ? AND parent_id = ?
                     LIMIT ? OFFSET ? """,
@@ -105,7 +107,7 @@ def get_comment_or_none(conn: sqlite3.Connection, comment_id: str) -> dict:
     with conn:
         curry = conn.execute(
             """
-            SELECT comment, comment_id, channel_name, channel_id, channel_url, timestamp, signature, signing_ts, parent_id
+            SELECT comment, claim_id, comment_id, channel_name, channel_id, channel_url, timestamp, signature, signing_ts, parent_id, is_hidden
             FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?
             """,
             (comment_id,)
@@ -144,7 +146,11 @@ def get_comments_by_id(conn, comment_ids: list) -> typing.Union[list, None]:
     placeholders = ', '.join('?' for _ in comment_ids)
     with conn:
         return [clean(dict(row)) for row in conn.execute(
-            f'SELECT * FROM COMMENTS_ON_CLAIMS WHERE comment_id IN ({placeholders})',
+            """
+            SELECT comment, claim_id, comment_id, channel_name, channel_id,
+                channel_url, timestamp, signature, signing_ts, parent_id, is_hidden 
+            FROM COMMENTS_ON_CLAIMS 
+            """ + f' WHERE comment_id IN ({placeholders})',
             tuple(comment_ids)
         )]
 
@@ -178,7 +184,7 @@ def get_channel_id_from_comment_id(conn: sqlite3.Connection, comment_id: str):
             SELECT channel_id, channel_name FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?
         """, (comment_id,)
         ).fetchone()
-        return dict(channel) if channel else dict()
+        return dict(channel) if channel else {}
 
 
 class DatabaseWriter(object):
