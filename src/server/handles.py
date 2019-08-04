@@ -28,23 +28,23 @@ def ping(*args):
 
 
 def handle_get_channel_from_comment_id(app, kwargs: dict):
-    with app['reader'] as conn:
-        return get_channel_id_from_comment_id(conn, **kwargs)
+    return get_channel_id_from_comment_id(app['reader'], **kwargs)
 
 
 def handle_get_comment_ids(app, kwargs):
-    with app['reader'] as conn:
-        return get_comment_ids(conn, **kwargs)
+    return get_comment_ids(app['reader'], **kwargs)
 
 
 def handle_get_claim_comments(app, kwargs):
-    with app['reader'] as conn:
-        return get_claim_comments(conn, **kwargs)
+    return get_claim_comments(app['reader'], **kwargs)
 
 
 def handle_get_comments_by_id(app, kwargs):
-    with app['reader'] as conn:
-        return get_comments_by_id(conn, **kwargs)
+    return get_comments_by_id(app['reader'], **kwargs)
+
+
+def handle_get_hidden_claim_comments(app, kwargs):
+    return get_hidden_claim_comments(app['reader'], **kwargs)
 
 
 async def handle_create_comment(app, params):
@@ -66,13 +66,14 @@ async def handle_hide_comment(app, params):
 METHODS = {
     'ping': ping,
     'get_claim_comments': handle_get_claim_comments,
+    'get_hidden_claim_comments': handle_get_hidden_claim_comments,
     'get_comment_ids': handle_get_comment_ids,
     'get_comments_by_id': handle_get_comments_by_id,
     'get_channel_from_comment_id': handle_get_channel_from_comment_id,
     'create_comment': handle_create_comment,
     'delete_comment': handle_delete_comment,
+    'abandon_comment': handle_delete_comment,
     'hide_comment': handle_hide_comment,
-    # 'abandon_comment': handle_delete_comment,
 }
 
 
