@@ -6,7 +6,7 @@ from unittest.case import _Outcome
 
 import asyncio
 
-from database.queries import obtain_connection, setup_database
+from src.database.queries import obtain_connection, setup_database
 
 
 class AsyncioTestCase(unittest.TestCase):

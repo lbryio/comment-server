@@ -5,10 +5,13 @@ from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
 
-from database.queries import get_comments_by_id
-from database.queries import get_comment_ids
-from database.queries import get_claim_comments
-from database.writes import create_comment_or_error
+from src.database.queries import get_comments_by_id
+from src.database.queries import get_comment_ids
+from src.database.queries import get_claim_comments
+from src.database.queries import get_hidden_claim_comments
+from src.database.writes import create_comment_or_error
+from src.database.queries import hide_comment_by_id
+from src.database.queries import delete_comment_by_id
 from tests.testcase import DatabaseTestCase
 
 fake = faker.Faker()
