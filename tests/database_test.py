@@ -20,7 +20,7 @@ fake.add_provider(lorem)
 fake.add_provider(misc)
 
 
-class TestCommentCreation(DatabaseTestCase):
+class TestDatabaseOperations(DatabaseTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.claimId = '529357c3422c6046d3fec76be2358004ba22e340'
@@ -195,6 +195,31 @@ class TestCommentCreation(DatabaseTestCase):
                 self.assertLessEqual(len(replies), 50)
                 self.assertEqual(len(replies), len(comments_ids))
 
+    def test07HideComments(self):
+        comm = create_comment_or_error(self.conn, 'Comment #1', self.claimId, '1'*40, '@Doge123', 'a'*128, '123')
+        comment = get_comments_by_id(self.conn, [comm['comment_id']]).pop()
+        self.assertFalse(comment['is_hidden'])
+        success = hide_comment_by_id(self.conn, comm['comment_id'])
+        self.assertTrue(success)
+        comment = get_comments_by_id(self.conn, [comm['comment_id']]).pop()
+        self.assertTrue(comment['is_hidden'])
+        success = hide_comment_by_id(self.conn, comm['comment_id'])
+        self.assertTrue(success)
+        comment = get_comments_by_id(self.conn, [comm['comment_id']]).pop()
+        self.assertTrue(comment['is_hidden'])
+
+    def test08DeleteComments(self):
+        comm = create_comment_or_error(self.conn, 'Comment #1', self.claimId, '1'*40, '@Doge123', 'a'*128, '123')
+        comments = get_claim_comments(self.conn, self.claimId)
+        self.assertIn(comm, comments['items'])
+        deleted = delete_comment_by_id(self.conn, comm['comment_id'])
+        self.assertTrue(deleted)
+        comments = get_claim_comments(self.conn, self.claimId)
+        self.assertNotIn(comm, comments['items'])
+        deleted = delete_comment_by_id(self.conn, comm['comment_id'])
+        self.assertFalse(deleted)
+
+
 
 class ListDatabaseTest(DatabaseTestCase):
     def setUp(self) -> None:
@@ -207,6 +232,8 @@ class ListDatabaseTest(DatabaseTestCase):
                 comments = get_claim_comments(self.conn, claim_id)
                 self.assertIsNotNone(comments)
                 self.assertGreater(comments['page_size'], 0)
+                self.assertIn('has_hidden_comments', comments)
+                self.assertFalse(comments['has_hidden_comments'])
                 top_comments = get_claim_comments(self.conn, claim_id, top_level=True, page=1, page_size=50)
                 self.assertIsNotNone(top_comments)
                 self.assertEqual(top_comments['page_size'], 50)
@@ -220,6 +247,45 @@ class ListDatabaseTest(DatabaseTestCase):
                     matching_comments = get_comments_by_id(self.conn, comment_ids)
                     self.assertIsNotNone(matching_comments)
                     self.assertEqual(len(matching_comments), len(comment_ids))
+
+    def testHiddenCommentLists(self):
+        claim_id = 'a'*40
+        comm1 = create_comment_or_error(self.conn, 'Comment #1', claim_id, '1'*40, '@Doge123', 'a'*128, '123')
+        comm2 = create_comment_or_error(self.conn, 'Comment #2', claim_id, '1'*40, '@Doge123', 'b'*128, '123')
+        comm3 = create_comment_or_error(self.conn, 'Comment #3', claim_id, '1'*40, '@Doge123', 'c'*128, '123')
+        comments = [comm1, comm2, comm3]
+
+        comment_list = get_claim_comments(self.conn, claim_id)
+        self.assertIn('items', comment_list)
+        self.assertIn('has_hidden_comments', comment_list)
+        self.assertEqual(len(comments), comment_list['total_items'])
+        self.assertIn('has_hidden_comments', comment_list)
+        self.assertFalse(comment_list['has_hidden_comments'])
+        hide_comment_by_id(self.conn, comm2['comment_id'])
+
+        default_comments = get_hidden_claim_comments(self.conn, claim_id)
+        self.assertIn('has_hidden_comments', default_comments)
+
+        hidden_comments = get_hidden_claim_comments(self.conn, claim_id, hidden=True)
+        self.assertIn('has_hidden_comments', hidden_comments)
+        self.assertEqual(default_comments, hidden_comments)
+
+        hidden_comment = hidden_comments['items'][0]
+        self.assertEqual(hidden_comment['comment_id'], comm2['comment_id'])
+
+        visible_comments = get_hidden_claim_comments(self.conn, claim_id, hidden=False)
+        self.assertIn('has_hidden_comments', visible_comments)
+        self.assertNotIn(hidden_comment, visible_comments['items'])
+
+        hidden_ids = [c['comment_id'] for c in hidden_comments['items']]
+        visible_ids = [c['comment_id'] for c in visible_comments['items']]
+        composite_ids = hidden_ids + visible_ids
+        composite_ids.sort()
+
+        comment_list = get_claim_comments(self.conn, claim_id)
+        all_ids = [c['comment_id'] for c in comment_list['items']]
+        all_ids.sort()
+        self.assertEqual(composite_ids, all_ids)
 
 
 def generate_top_comments(ncid=15, ncomm=100, minchar=50, maxchar=500):
