@@ -170,6 +170,15 @@ def delete_comment_by_id(conn: sqlite3.Connection, comment_id: str):
         return bool(curs.rowcount)
 
 
+def hide_comment_by_id(conn: sqlite3.Connection, comment_id: str):
+    with conn:
+        curs = conn.execute("""
+        UPDATE OR IGNORE COMMENT SET IsHidden = TRUE
+            WHERE CommentId = ?
+        """, (comment_id,))
+        return bool(curs.rowcount)
+
+
 def insert_channel(conn: sqlite3.Connection, channel_name: str, channel_id: str):
     with conn:
         conn.execute(
