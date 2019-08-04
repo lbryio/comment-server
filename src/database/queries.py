@@ -12,6 +12,13 @@ from src.database.schema import CREATE_TABLES_QUERY
 logger = logging.getLogger(__name__)
 
 
+SELECT_COMMENTS_ON_CLAIMS = """
+    SELECT comment, comment_id, channel_name, channel_id, channel_url,
+        timestamp, signature, signing_ts, parent_id, is_hidden
+    FROM COMMENTS_ON_CLAIMS 
+"""
+
+
 def clean(thing: dict) -> dict:
     if 'is_hidden' in thing:
         thing.update({'is_hidden': bool(thing['is_hidden'])})
@@ -30,51 +37,30 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
     with conn:
         if top_level:
             results = [clean(dict(row)) for row in conn.execute(
-                """ SELECT comment, comment_id, channel_name, channel_id, 
-                        channel_url, timestamp, signature, signing_ts, parent_id, is_hidden
-                    FROM COMMENTS_ON_CLAIMS 
-                    WHERE claim_id = ? AND parent_id IS NULL
-                    LIMIT ? OFFSET ? """,
+                SELECT_COMMENTS_ON_CLAIMS + " WHERE claim_id = ? AND parent_id IS NULL LIMIT ? OFFSET ?",
                 (claim_id, page_size, page_size * (page - 1))
             )]
             count = conn.execute(
-                """
-                SELECT COUNT(*)
-                FROM COMMENTS_ON_CLAIMS
-                WHERE claim_id = ? AND parent_id IS NULL
-                """, (claim_id,)
+                "SELECT COUNT(*) FROM COMMENTS_ON_CLAIMS WHERE claim_id = ? AND parent_id IS NULL",
+                (claim_id,)
             )
         elif parent_id is None:
             results = [clean(dict(row)) for row in conn.execute(
-                """ SELECT comment, comment_id, channel_name, channel_id, 
-                        channel_url, timestamp, signature, signing_ts, parent_id, is_hidden
-                    FROM COMMENTS_ON_CLAIMS 
-                    WHERE claim_id = ? 
-                    LIMIT ? OFFSET ? """,
+                SELECT_COMMENTS_ON_CLAIMS + "WHERE claim_id = ? LIMIT ? OFFSET ? ",
                 (claim_id, page_size, page_size * (page - 1))
             )]
             count = conn.execute(
-                """
-                    SELECT COUNT(*) 
-                    FROM COMMENTS_ON_CLAIMS 
-                    WHERE claim_id = ? 
-                """, (claim_id,)
+                "SELECT COUNT(*) FROM COMMENTS_ON_CLAIMS WHERE claim_id = ?",
+                (claim_id,)
             )
         else:
             results = [clean(dict(row)) for row in conn.execute(
-                """ SELECT comment, comment_id, channel_name, channel_id, 
-                        channel_url, timestamp, signature, signing_ts, parent_id, is_hidden
-                    FROM COMMENTS_ON_CLAIMS 
-                    WHERE claim_id = ? AND parent_id = ?
-                    LIMIT ? OFFSET ? """,
+                SELECT_COMMENTS_ON_CLAIMS + "WHERE claim_id = ? AND parent_id = ? LIMIT ? OFFSET ? ",
                 (claim_id, parent_id, page_size, page_size * (page - 1))
             )]
             count = conn.execute(
-                """
-                    SELECT COUNT(*) 
-                    FROM COMMENTS_ON_CLAIMS 
-                    WHERE claim_id = ? AND parent_id = ?
-                """, (claim_id, parent_id)
+                "SELECT COUNT(*) FROM COMMENTS_ON_CLAIMS WHERE claim_id = ? AND parent_id = ?",
+                (claim_id, parent_id)
             )
         count = tuple(count.fetchone())[0]
         return {
@@ -105,13 +91,7 @@ def insert_comment(conn: sqlite3.Connection, claim_id: str, comment: str, parent
 
 def get_comment_or_none(conn: sqlite3.Connection, comment_id: str) -> dict:
     with conn:
-        curry = conn.execute(
-            """
-            SELECT comment, claim_id, comment_id, channel_name, channel_id, channel_url, timestamp, signature, signing_ts, parent_id, is_hidden
-            FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?
-            """,
-            (comment_id,)
-        )
+        curry = conn.execute(SELECT_COMMENTS_ON_CLAIMS + "WHERE comment_id = ?", (comment_id,))
         thing = curry.fetchone()
         return clean(dict(thing)) if thing else None
 
@@ -146,22 +126,9 @@ def get_comments_by_id(conn, comment_ids: list) -> typing.Union[list, None]:
     placeholders = ', '.join('?' for _ in comment_ids)
     with conn:
         return [clean(dict(row)) for row in conn.execute(
-            """
-            SELECT comment, claim_id, comment_id, channel_name, channel_id,
-                channel_url, timestamp, signature, signing_ts, parent_id, is_hidden 
-            FROM COMMENTS_ON_CLAIMS 
-            """ + f' WHERE comment_id IN ({placeholders})',
+            SELECT_COMMENTS_ON_CLAIMS + f'WHERE comment_id IN ({placeholders})',
             tuple(comment_ids)
         )]
-
-
-def delete_anonymous_comment_by_id(conn: sqlite3.Connection, comment_id: str):
-    with conn:
-        curs = conn.execute(
-            "DELETE FROM COMMENT WHERE ChannelId IS NULL AND CommentId = ?",
-            (comment_id,)
-        )
-        return curs.rowcount
 
 
 def delete_comment_by_id(conn: sqlite3.Connection, comment_id: str):
@@ -172,26 +139,20 @@ def delete_comment_by_id(conn: sqlite3.Connection, comment_id: str):
 
 def hide_comment_by_id(conn: sqlite3.Connection, comment_id: str):
     with conn:
-        curs = conn.execute("""
-        UPDATE OR IGNORE COMMENT SET IsHidden = TRUE
-            WHERE CommentId = ?
-        """, (comment_id,))
+        curs = conn.execute("UPDATE OR IGNORE COMMENT SET IsHidden = TRUE WHERE CommentId = ?", (comment_id,))
         return bool(curs.rowcount)
 
 
 def insert_channel(conn: sqlite3.Connection, channel_name: str, channel_id: str):
     with conn:
-        conn.execute(
-            'INSERT INTO CHANNEL(ClaimId, Name)  VALUES (?, ?)',
-            (channel_id, channel_name)
-        )
+        curs = conn.execute('INSERT INTO CHANNEL(ClaimId, Name)  VALUES (?, ?)', (channel_id, channel_name))
+        return bool(curs.rowcount)
 
 
 def get_channel_id_from_comment_id(conn: sqlite3.Connection, comment_id: str):
     with conn:
-        channel = conn.execute("""
-            SELECT channel_id, channel_name FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?
-        """, (comment_id,)
+        channel = conn.execute(
+            "SELECT channel_id, channel_name FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?", (comment_id,)
         ).fetchone()
         return dict(channel) if channel else {}
 
