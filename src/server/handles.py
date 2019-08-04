@@ -13,7 +13,10 @@ from database.queries import get_channel_id_from_comment_id
 from src.server.misc import is_valid_base_comment
 from src.server.misc import is_valid_credential_input
 from src.server.misc import make_error
-from database.writes import delete_comment_if_authorized, write_comment
+from database.writes import delete_comment_if_authorized
+from database.writes import write_comment
+from database.writes import hide_comment_if_authorized
+
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +58,10 @@ async def handle_delete_comment(app, params):
     return await delete_comment_if_authorized(app, **params)
 
 
+async def handle_hide_comment(app, params):
+    return await hide_comment_if_authorized(app, **params)
+
+
 METHODS = {
     'ping': ping,
     'get_claim_comments': handle_get_claim_comments,
@@ -63,6 +70,7 @@ METHODS = {
     'get_channel_from_comment_id': handle_get_channel_from_comment_id,
     'create_comment': handle_create_comment,
     'delete_comment': handle_delete_comment,
+    'hide_comment': handle_hide_comment,
     # 'abandon_comment': handle_delete_comment,
 }
 
