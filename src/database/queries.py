@@ -22,7 +22,7 @@ SELECT_COMMENTS_ON_CLAIMS = """
 def clean(thing: dict) -> dict:
     if 'is_hidden' in thing:
         thing.update({'is_hidden': bool(thing['is_hidden'])})
-    return {k: v for k, v in thing.items() if v}
+    return {k: v for k, v in thing.items() if v is not None}
 
 
 def obtain_connection(filepath: str = None, row_factory: bool = True):
@@ -68,8 +68,40 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
             'page': page,
             'page_size': page_size,
             'total_pages': math.ceil(count / page_size),
-            'total_items': count
+            'total_items': count,
+            'has_hidden_comments': claim_has_hidden_comments(conn, claim_id)
         }
+
+
+def get_hidden_claim_comments(conn: sqlite3.Connection, claim_id: str, hidden=True, page=1, page_size=50):
+    with conn:
+        results = conn.execute(
+            SELECT_COMMENTS_ON_CLAIMS + "WHERE claim_id = ? AND is_hidden = ? LIMIT ? OFFSET ?",
+            (claim_id, hidden, page_size, page_size * (page - 1))
+        )
+        count = conn.execute(
+            "SELECT COUNT(*) FROM COMMENTS_ON_CLAIMS WHERE claim_id = ? AND is_hidden = ?", (claim_id, hidden)
+        )
+    results = [clean(dict(row)) for row in results.fetchall()]
+    count = tuple(count.fetchone())[0]
+
+    return {
+        'items': results,
+        'page': page,
+        'page_size': page_size,
+        'total_pages': math.ceil(count/page_size),
+        'total_items': count,
+        'has_hidden_comments': claim_has_hidden_comments(conn, claim_id)
+    }
+
+
+def claim_has_hidden_comments(conn, claim_id):
+    with conn:
+        result = conn.execute(
+            "SELECT COUNT(DISTINCT is_hidden) FROM COMMENTS_ON_CLAIMS WHERE claim_id = ? AND is_hidden = TRUE",
+            (claim_id,)
+        )
+        return bool(tuple(result.fetchone())[0])
 
 
 def insert_comment(conn: sqlite3.Connection, claim_id: str, comment: str, parent_id: str = None,
