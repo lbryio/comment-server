@@ -82,11 +82,11 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
 def get_claim_hidden_comments(conn: sqlite3.Connection, claim_id: str, hidden=True, page=1, page_size=50):
     with conn:
         results = conn.execute(
-            SELECT_COMMENTS_ON_CLAIMS + "WHERE claim_id = ? AND is_hidden = ? LIMIT ? OFFSET ?",
+            SELECT_COMMENTS_ON_CLAIMS + "WHERE claim_id = ? AND is_hidden IS ? LIMIT ? OFFSET ?",
             (claim_id, hidden, page_size, page_size * (page - 1))
         )
         count = conn.execute(
-            "SELECT COUNT(*) FROM COMMENTS_ON_CLAIMS WHERE claim_id = ? AND is_hidden = ?", (claim_id, hidden)
+            "SELECT COUNT(*) FROM COMMENTS_ON_CLAIMS WHERE claim_id = ? AND is_hidden IS ?", (claim_id, hidden)
         )
     results = [clean(dict(row)) for row in results.fetchall()]
     count = tuple(count.fetchone())[0]
@@ -104,7 +104,7 @@ def get_claim_hidden_comments(conn: sqlite3.Connection, claim_id: str, hidden=Tr
 def claim_has_hidden_comments(conn, claim_id):
     with conn:
         result = conn.execute(
-            "SELECT COUNT(DISTINCT is_hidden) FROM COMMENTS_ON_CLAIMS WHERE claim_id = ? AND is_hidden = TRUE",
+            "SELECT COUNT(DISTINCT is_hidden) FROM COMMENTS_ON_CLAIMS WHERE claim_id = ? AND is_hidden IS TRUE",
             (claim_id,)
         )
         return bool(tuple(result.fetchone())[0])
