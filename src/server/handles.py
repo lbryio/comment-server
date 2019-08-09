@@ -16,7 +16,7 @@ from src.server.misc import is_valid_credential_input
 from src.server.misc import make_error
 from src.database.writes import delete_comment_if_authorized
 from src.database.writes import write_comment
-from src.database.writes import hide_comment_if_authorized
+from src.database.writes import hide_comments_where_authorized
 
 
 logger = logging.getLogger(__name__)
@@ -59,8 +59,8 @@ async def handle_delete_comment(app, params):
     return await delete_comment_if_authorized(app, **params)
 
 
-async def handle_hide_comment(app, params):
-    return await hide_comment_if_authorized(app, **params)
+async def handle_hide_comments(app, params):
+    return await hide_comments_where_authorized(app, **params)
 
 
 METHODS = {
@@ -73,7 +73,7 @@ METHODS = {
     'create_comment': handle_create_comment,
     'delete_comment': handle_delete_comment,
     'abandon_comment': handle_delete_comment,
-    'hide_comment': handle_hide_comment,
+    'hide_comments': handle_hide_comments
 }
 
 

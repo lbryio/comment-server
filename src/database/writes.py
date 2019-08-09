@@ -3,12 +3,12 @@ import sqlite3
 
 from asyncio import coroutine
 
+from src.database.queries import hide_comments_by_id
 from src.database.queries import delete_comment_by_id
 from src.database.queries import get_comment_or_none
 from src.database.queries import insert_comment
 from src.database.queries import insert_channel
-from src.database.queries import get_channel_id_from_comment_id
-from src.database.queries import hide_comment_by_id
+from src.database.queries import get_claim_ids_from_comment_ids
 from src.server.misc import is_authentic_delete_signal
 from src.server.misc import request_lbrynet
 from src.server.misc import validate_signature_from_claim
@@ -54,28 +54,32 @@ async def write_comment(app, params):
     return await coroutine(create_comment_or_error)(app['writer'], **params)
 
 
-async def hide_comment(app, comment_id):
-    return await coroutine(hide_comment_by_id)(app['writer'], comment_id)
+async def hide_comments(app, comment_ids):
+    return await coroutine(hide_comments_by_id)(app['writer'], comment_ids)
+
 
 async def claim_search(app, **kwargs):
     return (await request_lbrynet(app, 'claim_search', **kwargs))['items'][0]
 
-# comment_ids: [
-#   {
-#       "comment_id": id,
-#       "signing_ts": signing_ts,
-#       "signature": signature
-#   },
-#   ...
-# ]
-async def hide_comment_if_authorized(app, comment_id, signing_ts, signature):
-    channel = get_channel_id_from_comment_id(app['reader'], comment_id)
-    claim = await request_lbrynet(app, 'claim_search', claim_id=channel['channel_id'])
-    claim = claim['items'][0]
-    if not validate_signature_from_claim(claim, signature, signing_ts, comment_id):
-        raise ValueError('Invalid Signature')
 
-    job = await app['comment_scheduler'].spawn(hide_comment(app, comment_id))
-    return {
-        'hidden': await job.wait()
-    }
+async def hide_comments_where_authorized(app, pieces: list):
+    comment_cids = get_claim_ids_from_comment_ids(
+        conn=app['reader'],
+        comment_ids=[p['comment_id'] for p in pieces]
+    )
+    # TODO: Amortize this process
+    claims = {}
+    comments_to_hide = []
+    for p in pieces:
+        claim_id = comment_cids[p['comment_id']]
+        if claim_id not in claims:
+            claims[claim_id] = await claim_search(app, claim_id=claim_id, no_totals=True)
+        channel = claims[claim_id].get('signing_channel')
+        if validate_signature_from_claim(channel, p['signature'], p['signing_ts'], p['comment_id']):
+            comments_to_hide.append(p['comment_id'])
+
+    if comments_to_hide:
+        job = await app['comment_scheduler'].spawn(hide_comments(app, comments_to_hide))
+        await job.wait()
+
+    return {'hidden': comments_to_hide}
