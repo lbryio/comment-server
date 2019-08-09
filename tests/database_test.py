@@ -222,7 +222,6 @@ class TestDatabaseOperations(DatabaseTestCase):
         self.assertFalse(deleted)
 
 
-
 class ListDatabaseTest(DatabaseTestCase):
     def setUp(self) -> None:
         super().setUp()
