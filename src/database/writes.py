@@ -57,6 +57,8 @@ async def write_comment(app, params):
 async def hide_comment(app, comment_id):
     return await coroutine(hide_comment_by_id)(app['writer'], comment_id)
 
+async def claim_search(app, **kwargs):
+    return (await request_lbrynet(app, 'claim_search', **kwargs))['items'][0]
 
 # comment_ids: [
 #   {
