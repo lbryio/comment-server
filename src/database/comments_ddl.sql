@@ -9,13 +9,13 @@ CREATE TABLE IF NOT EXISTS COMMENT
 (
     CommentId   TEXT    NOT NULL,
     LbryClaimId TEXT    NOT NULL,
-    ChannelId   TEXT                DEFAULT (NULL),
+    ChannelId   TEXT                DEFAULT NULL,
     Body        TEXT    NOT NULL,
-    ParentId    TEXT                DEFAULT (NULL),
-    Signature   TEXT                DEFAULT (NULL),
+    ParentId    TEXT                DEFAULT NULL,
+    Signature   TEXT                DEFAULT NULL,
     Timestamp   INTEGER NOT NULL,
-    SigningTs   TEXT                DEFAULT (NULL),
-    IsHidden    BOOLEAN NOT NULL    DEFAULT (FALSE),
+    SigningTs   TEXT                DEFAULT NULL,
+    IsHidden    BOOLEAN NOT NULL    DEFAULT FALSE,
     CONSTRAINT COMMENT_PRIMARY_KEY PRIMARY KEY (CommentId) ON CONFLICT IGNORE,
     CONSTRAINT COMMENT_SIGNATURE_SK UNIQUE (Signature) ON CONFLICT ABORT,
     CONSTRAINT COMMENT_CHANNEL_FK FOREIGN KEY (ChannelId) REFERENCES CHANNEL (ClaimId)

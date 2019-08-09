@@ -104,7 +104,7 @@ def get_claim_hidden_comments(conn: sqlite3.Connection, claim_id: str, hidden=Tr
 def claim_has_hidden_comments(conn, claim_id):
     with conn:
         result = conn.execute(
-            "SELECT COUNT(DISTINCT is_hidden) FROM COMMENTS_ON_CLAIMS WHERE claim_id = ? AND is_hidden IS TRUE",
+            "SELECT COUNT(DISTINCT is_hidden) FROM COMMENTS_ON_CLAIMS WHERE claim_id = ? AND is_hidden IS 1",
             (claim_id,)
         )
         return bool(tuple(result.fetchone())[0])

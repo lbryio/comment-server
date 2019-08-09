@@ -12,7 +12,7 @@ CREATE_COMMENT_TABLE = """
         Signature   TEXT                DEFAULT NULL,
         Timestamp   INTEGER NOT NULL,
         SigningTs   TEXT                DEFAULT NULL,
-        IsHidden    BOOLEAN NOT NULL    DEFAULT (FALSE),
+        IsHidden    BOOLEAN NOT NULL    DEFAULT FALSE,
         CONSTRAINT COMMENT_PRIMARY_KEY PRIMARY KEY (CommentId) ON CONFLICT IGNORE,
         CONSTRAINT COMMENT_SIGNATURE_SK UNIQUE (Signature) ON CONFLICT ABORT,
         CONSTRAINT COMMENT_CHANNEL_FK FOREIGN KEY (ChannelId) REFERENCES CHANNEL (ClaimId)
@@ -48,7 +48,7 @@ CREATE_COMMENTS_ON_CLAIMS_VIEW = """
         C.Signature AS signature,
         C.SigningTs AS signing_ts,
         C.ParentId AS parent_id,
-        C.IsHidden as is_hidden
+        C.IsHidden AS is_hidden
     FROM COMMENT AS C
              LEFT OUTER JOIN CHANNEL CHAN ON C.ChannelId = CHAN.ClaimId
     ORDER BY C.Timestamp DESC;
