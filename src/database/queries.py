@@ -18,6 +18,12 @@ SELECT_COMMENTS_ON_CLAIMS = """
     FROM COMMENTS_ON_CLAIMS 
 """
 
+SELECT_COMMENTS_ON_CLAIMS_CLAIMID = """
+    SELECT comment, comment_id, claim_id, channel_name, channel_id, channel_url,
+        timestamp, signature, signing_ts, parent_id, is_hidden
+    FROM COMMENTS_ON_CLAIMS 
+"""
+
 
 def clean(thing: dict) -> dict:
     if 'is_hidden' in thing:
@@ -123,7 +129,7 @@ def insert_comment(conn: sqlite3.Connection, claim_id: str, comment: str, parent
 
 def get_comment_or_none(conn: sqlite3.Connection, comment_id: str) -> dict:
     with conn:
-        curry = conn.execute(SELECT_COMMENTS_ON_CLAIMS + "WHERE comment_id = ?", (comment_id,))
+        curry = conn.execute(SELECT_COMMENTS_ON_CLAIMS_CLAIMID + "WHERE comment_id = ?", (comment_id,))
         thing = curry.fetchone()
         return clean(dict(thing)) if thing else None
 
@@ -152,13 +158,13 @@ def get_comment_ids(conn: sqlite3.Connection, claim_id: str, parent_id: str = No
     return [tuple(row)[0] for row in curs.fetchall()]
 
 
-def get_comments_by_id(conn, comment_ids: list) -> typing.Union[list, None]:
+def get_comments_by_id(conn, comment_ids: typing.Union[list, tuple]) -> typing.Union[list, None]:
     """ Returns a list containing the comment data associated with each ID within the list"""
     # format the input, under the assumption that the
     placeholders = ', '.join('?' for _ in comment_ids)
     with conn:
         return [clean(dict(row)) for row in conn.execute(
-            SELECT_COMMENTS_ON_CLAIMS + f'WHERE comment_id IN ({placeholders})',
+            SELECT_COMMENTS_ON_CLAIMS_CLAIMID + f'WHERE comment_id IN ({placeholders})',
             tuple(comment_ids)
         )]
 
@@ -166,12 +172,6 @@ def get_comments_by_id(conn, comment_ids: list) -> typing.Union[list, None]:
 def delete_comment_by_id(conn: sqlite3.Connection, comment_id: str):
     with conn:
         curs = conn.execute("DELETE FROM COMMENT WHERE CommentId = ?", (comment_id,))
-        return bool(curs.rowcount)
-
-
-def hide_comment_by_id(conn: sqlite3.Connection, comment_id: str):
-    with conn:
-        curs = conn.execute("UPDATE OR IGNORE COMMENT SET IsHidden = TRUE WHERE CommentId = ?", (comment_id,))
         return bool(curs.rowcount)
 
 
@@ -187,6 +187,26 @@ def get_channel_id_from_comment_id(conn: sqlite3.Connection, comment_id: str):
             "SELECT channel_id, channel_name FROM COMMENTS_ON_CLAIMS WHERE comment_id = ?", (comment_id,)
         ).fetchone()
         return dict(channel) if channel else {}
+
+
+def get_claim_ids_from_comment_ids(conn: sqlite3.Connection, comment_ids: list):
+    with conn:
+        cids = conn.execute(
+            f""" SELECT  CommentId as comment_id, LbryClaimId AS claim_id FROM COMMENT 
+            WHERE CommentId IN ({', '.join('?' for _ in comment_ids)}) """,
+            tuple(comment_ids)
+        )
+        return {row['comment_id']: row['claim_id'] for row in cids.fetchall()}
+
+
+def hide_comments_by_id(conn: sqlite3.Connection, comment_ids: list):
+    with conn:
+        curs = conn.cursor()
+        curs.executemany(
+            "UPDATE COMMENT SET IsHidden = TRUE WHERE CommentId = ?",
+            [[c] for c in comment_ids]
+        )
+        return bool(curs.rowcount)
 
 
 class DatabaseWriter(object):
