@@ -7,13 +7,17 @@ from aiohttp import web
 from aiojobs.aiohttp import atomic
 
 from src.server.misc import clean_input_params
-from database.queries import get_claim_comments
-from database.queries import get_comments_by_id, get_comment_ids
-from database.queries import get_channel_id_from_comment_id
+from src.database.queries import get_claim_comments
+from src.database.queries import get_comments_by_id, get_comment_ids
+from src.database.queries import get_channel_id_from_comment_id
+from src.database.queries import get_claim_hidden_comments
 from src.server.misc import is_valid_base_comment
 from src.server.misc import is_valid_credential_input
 from src.server.misc import make_error
-from database.writes import delete_comment_if_authorized, write_comment
+from src.database.writes import delete_comment_if_authorized
+from src.database.writes import write_comment
+from src.database.writes import hide_comments_where_authorized
+
 
 logger = logging.getLogger(__name__)
 
@@ -24,23 +28,23 @@ def ping(*args):
 
 
 def handle_get_channel_from_comment_id(app, kwargs: dict):
-    with app['reader'] as conn:
-        return get_channel_id_from_comment_id(conn, **kwargs)
+    return get_channel_id_from_comment_id(app['reader'], **kwargs)
 
 
 def handle_get_comment_ids(app, kwargs):
-    with app['reader'] as conn:
-        return get_comment_ids(conn, **kwargs)
+    return get_comment_ids(app['reader'], **kwargs)
 
 
 def handle_get_claim_comments(app, kwargs):
-    with app['reader'] as conn:
-        return get_claim_comments(conn, **kwargs)
+    return get_claim_comments(app['reader'], **kwargs)
 
 
 def handle_get_comments_by_id(app, kwargs):
-    with app['reader'] as conn:
-        return get_comments_by_id(conn, **kwargs)
+    return get_comments_by_id(app['reader'], **kwargs)
+
+
+def handle_get_claim_hidden_comments(app, kwargs):
+    return get_claim_hidden_comments(app['reader'], **kwargs)
 
 
 async def handle_create_comment(app, params):
@@ -55,15 +59,21 @@ async def handle_delete_comment(app, params):
     return await delete_comment_if_authorized(app, **params)
 
 
+async def handle_hide_comments(app, params):
+    return await hide_comments_where_authorized(app, **params)
+
+
 METHODS = {
     'ping': ping,
     'get_claim_comments': handle_get_claim_comments,
+    'get_claim_hidden_comments': handle_get_claim_hidden_comments,
     'get_comment_ids': handle_get_comment_ids,
     'get_comments_by_id': handle_get_comments_by_id,
     'get_channel_from_comment_id': handle_get_channel_from_comment_id,
     'create_comment': handle_create_comment,
     'delete_comment': handle_delete_comment,
-    # 'abandon_comment': handle_delete_comment,
+    'abandon_comment': handle_delete_comment,
+    'hide_comments': handle_hide_comments
 }
 
 
@@ -98,7 +108,7 @@ async def process_json(app, body: dict) -> dict:
 @atomic
 async def api_endpoint(request: web.Request):
     try:
-        web.access_logger.info(f'Forwarded headers: {request.forwarded}')
+        web.access_logger.info(f'Forwarded headers: {request.remote}')
         body = await request.json()
         if type(body) is list or type(body) is dict:
             if type(body) is list:

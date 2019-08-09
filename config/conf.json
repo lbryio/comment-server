@@ -1,6 +1,6 @@
 {
   "PATH": {
-    "DATABASE": "database/comments.db",
+    "DATABASE": "database/default.db",
     "ERROR_LOG": "logs/error.log",
     "DEBUG_LOG": "logs/debug.log",
     "SERVER_LOG": "logs/server.log"

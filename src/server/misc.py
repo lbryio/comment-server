@@ -41,20 +41,19 @@ def make_error(error, exc=None) -> dict:
         return body
 
 
-async def resolve_channel_claim(app, channel_id, channel_name):
-    lbry_url = f'lbry://{channel_name}#{channel_id}'
-    resolve_body = {'method': 'resolve', 'params': {'urls': [lbry_url]}}
+async def request_lbrynet(app, method, **params):
+    body = {'method': method, 'params': {**params}}
     try:
-        async with aiohttp.request('POST', app['config']['LBRYNET'], json=resolve_body) as req:
+        async with aiohttp.request('POST', app['config']['LBRYNET'], json=body) as req:
             try:
                 resp = await req.json()
             except JSONDecodeError as jde:
                 logger.exception(jde.msg)
-                raise Exception('JSON Decode Error in Claim Resolution')
+                raise Exception('JSON Decode Error In lbrynet request')
             finally:
                 if 'result' in resp:
-                    return resp['result'].get(lbry_url)
-                raise ValueError('claim resolution yields error', {'error': resp['error']})
+                    return resp['result']
+                raise ValueError('LBRYNET Request Error', {'error': resp['error']})
     except (ConnectionRefusedError, ClientConnectorError):
         logger.critical("Connection to the LBRYnet daemon failed, make sure it's running.")
         raise Exception("Server cannot verify delete signature")
@@ -111,7 +110,8 @@ def is_valid_credential_input(channel_id=None, channel_name=None, signature=None
 
 
 async def is_authentic_delete_signal(app, comment_id, channel_name, channel_id, signature, signing_ts):
-    claim = await resolve_channel_claim(app, channel_id, channel_name)
+    lbry_url = f'lbry://{channel_name}#{channel_id}'
+    claim = await request_lbrynet(app, 'resolve', urls=[lbry_url])
     if claim:
         public_key = claim['value']['public_key']
         claim_hash = binascii.unhexlify(claim['claim_id'].encode())[::-1]
@@ -122,6 +122,21 @@ async def is_authentic_delete_signal(app, comment_id, channel_name, channel_id, 
             public_key_bytes=binascii.unhexlify(public_key.encode())
         )
     return False
+
+
+def validate_signature_from_claim(claim, signature, signing_ts, data: str):
+    try:
+        if claim:
+            public_key = claim['value']['public_key']
+            claim_hash = binascii.unhexlify(claim['claim_id'].encode())[::-1]
+            injest = b''.join((signing_ts.encode(), claim_hash, data.encode()))
+            return is_signature_valid(
+                encoded_signature=get_encoded_signature(signature),
+                signature_digest=hashlib.sha256(injest).digest(),
+                public_key_bytes=binascii.unhexlify(public_key.encode())
+            )
+    except:
+        return False
 
 
 def clean_input_params(kwargs: dict):
