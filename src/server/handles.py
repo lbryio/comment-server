@@ -108,7 +108,7 @@ async def process_json(app, body: dict) -> dict:
 @atomic
 async def api_endpoint(request: web.Request):
     try:
-        web.access_logger.info(f'Forwarded headers: {request.forwarded}')
+        web.access_logger.info(f'Forwarded headers: {request.remote}')
         body = await request.json()
         if type(body) is list or type(body) is dict:
             if type(body) is list:
