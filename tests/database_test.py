@@ -10,7 +10,7 @@ from src.database.queries import get_comment_ids
 from src.database.queries import get_claim_comments
 from src.database.queries import get_claim_hidden_comments
 from src.database.writes import create_comment_or_error
-from src.database.queries import hide_comment_by_id
+from src.database.queries import hide_comments_by_id
 from src.database.queries import delete_comment_by_id
 from tests.testcase import DatabaseTestCase
 
@@ -199,11 +199,11 @@ class TestDatabaseOperations(DatabaseTestCase):
         comm = create_comment_or_error(self.conn, 'Comment #1', self.claimId, '1'*40, '@Doge123', 'a'*128, '123')
         comment = get_comments_by_id(self.conn, [comm['comment_id']]).pop()
         self.assertFalse(comment['is_hidden'])
-        success = hide_comment_by_id(self.conn, comm['comment_id'])
+        success = hide_comments_by_id(self.conn, [comm['comment_id']])
         self.assertTrue(success)
         comment = get_comments_by_id(self.conn, [comm['comment_id']]).pop()
         self.assertTrue(comment['is_hidden'])
-        success = hide_comment_by_id(self.conn, comm['comment_id'])
+        success = hide_comments_by_id(self.conn, [comm['comment_id']])
         self.assertTrue(success)
         comment = get_comments_by_id(self.conn, [comm['comment_id']]).pop()
         self.assertTrue(comment['is_hidden'])
@@ -211,11 +211,13 @@ class TestDatabaseOperations(DatabaseTestCase):
     def test08DeleteComments(self):
         comm = create_comment_or_error(self.conn, 'Comment #1', self.claimId, '1'*40, '@Doge123', 'a'*128, '123')
         comments = get_claim_comments(self.conn, self.claimId)
-        self.assertIn(comm, comments['items'])
+        match = list(filter(lambda x: comm['comment_id'] == x['comment_id'], comments['items']))
+        self.assertTrue(match)
         deleted = delete_comment_by_id(self.conn, comm['comment_id'])
         self.assertTrue(deleted)
         comments = get_claim_comments(self.conn, self.claimId)
-        self.assertNotIn(comm, comments['items'])
+        match = list(filter(lambda x: comm['comment_id'] == x['comment_id'], comments['items']))
+        self.assertFalse(match)
         deleted = delete_comment_by_id(self.conn, comm['comment_id'])
         self.assertFalse(deleted)
 
@@ -261,7 +263,7 @@ class ListDatabaseTest(DatabaseTestCase):
         self.assertEqual(len(comments), comment_list['total_items'])
         self.assertIn('has_hidden_comments', comment_list)
         self.assertFalse(comment_list['has_hidden_comments'])
-        hide_comment_by_id(self.conn, comm2['comment_id'])
+        hide_comments_by_id(self.conn, [comm2['comment_id']])
 
         default_comments = get_claim_hidden_comments(self.conn, claim_id)
         self.assertIn('has_hidden_comments', default_comments)
