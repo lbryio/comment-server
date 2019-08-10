@@ -1,4 +1,3 @@
-# cython: language_level=3
 import logging
 import time
 
@@ -14,7 +13,7 @@ from src.database.queries import get_claim_hidden_comments
 from src.server.misc import is_valid_base_comment
 from src.server.misc import is_valid_credential_input
 from src.server.misc import make_error
-from src.database.writes import delete_comment_if_authorized
+from src.database.writes import abandon_comment_if_authorized
 from src.database.writes import write_comment
 from src.database.writes import hide_comments_where_authorized
 

@@ -37,11 +37,11 @@ def insert_channel_or_error(conn: sqlite3.Connection, channel_name: str, channel
         raise ValueError('Received invalid values for channel_id or channel_name')
 
 
-async def delete_comment(app, comment_id):
+async def abandon_comment(app, comment_id):
     return await coroutine(delete_comment_by_id)(app['writer'], comment_id)
 
 
-async def delete_comment_if_authorized(app, comment_id, **kwargs):
+async def abandon_comment_if_authorized(app, comment_id, **kwargs):
     authorized = await is_authentic_delete_signal(app, comment_id, **kwargs)
     if not authorized:
         return {'deleted': False}
