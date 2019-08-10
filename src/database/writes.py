@@ -44,10 +44,10 @@ async def abandon_comment(app, comment_id):
 async def abandon_comment_if_authorized(app, comment_id, **kwargs):
     authorized = await is_authentic_delete_signal(app, comment_id, **kwargs)
     if not authorized:
-        return {'deleted': False}
+        return False
 
-    job = await app['comment_scheduler'].spawn(delete_comment(app, comment_id))
-    return {'deleted': await job.wait()}
+    job = await app['comment_scheduler'].spawn(abandon_comment(app, comment_id))
+    return await job.wait()
 
 
 async def write_comment(app, params):

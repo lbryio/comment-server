@@ -54,8 +54,8 @@ async def handle_create_comment(app, params):
         raise ValueError('base comment is invalid')
 
 
-async def handle_delete_comment(app, params):
-    return await delete_comment_if_authorized(app, **params)
+async def handle_abandon_comment(app, params):
+    return {'abandoned': await abandon_comment_if_authorized(app, **params)}
 
 
 async def handle_hide_comments(app, params):
@@ -70,8 +70,8 @@ METHODS = {
     'get_comments_by_id': handle_get_comments_by_id,
     'get_channel_from_comment_id': handle_get_channel_from_comment_id,
     'create_comment': handle_create_comment,
-    'delete_comment': handle_delete_comment,
-    'abandon_comment': handle_delete_comment,
+    'delete_comment': handle_abandon_comment,
+    'abandon_comment': handle_abandon_comment,
     'hide_comments': handle_hide_comments
 }
 
@@ -108,6 +108,10 @@ async def process_json(app, body: dict) -> dict:
 async def api_endpoint(request: web.Request):
     try:
         web.access_logger.info(f'Forwarded headers: {request.remote}')
+        logging.debug(f'Request: {request}')
+        for k, v in request.items():
+            logging.debug(f'{k}: {v}')
+
         body = await request.json()
         if type(body) is list or type(body) is dict:
             if type(body) is list:
