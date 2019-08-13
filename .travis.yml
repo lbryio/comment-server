@@ -1,2 +1,15 @@
+sudo: required
 language: python
+dist: xenial
+python: "3.7"
 
+jobs:
+  include:
+    - stage: "Tests"
+      name: "Unit Tests"
+      install:
+        - pip install -e .
+          mkdir database
+          mkdir logs
+      script:
+        - python -m unittest tests
