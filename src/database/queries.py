@@ -203,7 +203,7 @@ def hide_comments_by_id(conn: sqlite3.Connection, comment_ids: list):
     with conn:
         curs = conn.cursor()
         curs.executemany(
-            "UPDATE COMMENT SET IsHidden = TRUE WHERE CommentId = ?",
+            "UPDATE COMMENT SET IsHidden = 1 WHERE CommentId = ?",
             [[c] for c in comment_ids]
         )
         return bool(curs.rowcount)
