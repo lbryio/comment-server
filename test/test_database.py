@@ -1,5 +1,6 @@
-from random import randint
+import unittest
 
+from random import randint
 import faker
 from faker.providers import internet
 from faker.providers import lorem
@@ -12,7 +13,7 @@ from src.database.queries import get_claim_hidden_comments
 from src.database.writes import create_comment_or_error
 from src.database.queries import hide_comments_by_id
 from src.database.queries import delete_comment_by_id
-from tests.testcase import DatabaseTestCase
+from test.testcase import DatabaseTestCase
 
 fake = faker.Faker()
 fake.add_provider(internet)

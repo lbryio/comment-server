@@ -1,6 +1,6 @@
+import unittest
 import atexit
 import os
-import unittest
 from multiprocessing.pool import Pool
 import asyncio
 import aiohttp
@@ -15,7 +15,7 @@ from faker.providers import misc
 
 from src.settings import config
 from src.server import app
-from tests.testcase import AsyncioTestCase
+from test.testcase import AsyncioTestCase
 
 
 fake = faker.Faker()
