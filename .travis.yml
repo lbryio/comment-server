@@ -12,4 +12,4 @@ jobs:
         - mkdir database
         - mkdir logs
       script:
-        - python -m unittest tests.
+        - python -m unittest tests
