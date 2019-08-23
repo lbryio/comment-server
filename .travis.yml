@@ -9,7 +9,7 @@ jobs:
       name: "Unit Tests"
       install:
         - pip install -e .
-          mkdir database
-          mkdir logs
+        - mkdir database
+        - mkdir logs
       script:
         - python -m unittest tests.
