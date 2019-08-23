@@ -10,6 +10,5 @@ ExecStart=/home/lbry/comment-server/venv/bin/commentserv --port %i
 Restart=on-failure
 KillMode=process
 
-
 [Install]
 WantedBy=multi-user.target

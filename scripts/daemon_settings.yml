@@ -1,5 +1,5 @@
 # lbryum_servers: ['jiggytom.mynetgear.com:50001',]
-# comment_server: 'http://localhost:5921/api'
+comment_server: 'https://comments.lbry.com/dev/api'
 share_usage_data: false
 
 
