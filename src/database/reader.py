@@ -21,9 +21,6 @@ SEARCH_PARAMS = {
 TABLE = 'COMMENTS_ON_CLAIMS'
 
 
-
-
-
 ID_PARAM_LENS = {
     'comment_id': 64,
     'channel_id': 40,
@@ -49,23 +46,24 @@ GROUP_PARAMS = re.compile(rf"({'|'.join(GROUPABLE)})s")
 ID_PARAMS = re.compile(rf"({'|'.join(IDENTIFIERS)})")
 
 
+OPS = {
+    'eq': '=',
+    'gt': '>',
+    'lt': '<',
+    'gte': '>=',
+    'lte': '<=',
+    'like': 'LIKE',
+    'is': 'IS',
+    'is_not': 'IS NOT',
+    'is_null': 'IS NULL',
+    'is_not_null': 'IS NOT NULL',
+    'in': 'IN',
+    'not_in': 'NOT IN'
+}
+
+
 def create_query(cols=None, **constraints):
     table = 'COMMENTS_ON_CLAIMS'
-    for key in constraints.copy().keys():
-        if GROUP_PARAMS.fullmatch(key):
-            constraint = constraints.pop(key)
-            constraints.update({
-                f'{table}.{key[:-1]}__in': constraint
-            })
-        elif ID_PARAMS.fullmatch(key):
-            constraint = constraints.pop(key)
-            if isinstance(constraint, str):
-                if len(constraint) < ID_PARAM_LENS[key]:
-                    constraints[f'{table}.{key}__like'] = constraint + '%'
-                else:
-                    constraints[f'{table}.{key}__eq'] = constraint
-            else:
-                constraint[f'{table}.{key}__is_null'] = True
 
     ops = {'>': '__gt', '>=': '__gte', '<': '__lt', '<=': '__lte'}
     if 'timestamp' in constraints:
@@ -81,45 +79,6 @@ def create_query(cols=None, **constraints):
         elif isinstance(time, int):
             constraints[f'{prefix}__eq'] = time
 
-    if 'channel_name' in constraints:
-        constraint = constraints.pop('channel_name')
-        prefix = f'{table}.channel_name'
-        if isinstance(constraint, str):
-            constraints[f'{prefix}__like'] = constraint
-
-    if 'channel_is_null' in constraints:
-        constraint = constraints.pop('channel_is_null')
-        prefix = f'{table}.channel_id'
-        if isinstance(constraint, bool):
-            prefix += '__is_null' if constraint else '__is_not_null'
-            constraints[prefix] = True
-
-    if 'channel_url' in constraints:
-        constraint = constraints.pop('channel_url')
-        prefix = f'{table}.channel_url__like'
-        if isinstance(constraint, str):
-            constraints[prefix] = constraint
-
-    if 'is_hidden' in constraints:
-        constraint = constraints.pop('is_hidden')
-        if isinstance(constraint, bool):
-            constraints[f'{table}.is_hidden__is'] = constraint
-        else:
-            constraints[f'{table}.is_hidden__is'] = True
-
-    if 'signing_ts' in constraints:
-        constraint = constraints.pop('signing_ts')
-        if isinstance(constraint, str):
-            constraints[f'{table}.signing_ts__like'] = constraint
-        elif isinstance(constraint, int):
-            constraints[f'{table}.signing_ts__eq'] = str(constraint)
-        elif constraint is None:
-            constraints[f'{table}.signing_ts__is_null'] = True
-    if 'comment' in constraints:
-        constraint = constraints.pop('comment')
-        if isinstance(constraint, str):
-            constraints[f'{table}.comment__like'] = constraint
-
     sql = ['SELECT']
     if isinstance(cols, (list, tuple)):
         sql.append(', '.join(cols))
@@ -133,22 +92,6 @@ def create_query(cols=None, **constraints):
         sql += ['WHERE', conditions]
 
     return '\n'.join(sql), constraints
-
-
-OPS = {
-    'eq': '=',
-    'gt': '>',
-    'lt': '<',
-    'gte': '>=',
-    'lte': '<=',
-    'like': 'LIKE',
-    'is': 'IS',
-    'is_not': 'IS NOT',
-    'is_null': 'IS NULL',
-    'is_not_null': 'IS NOT NULL',
-    'in': 'IN',
-    'not_in': 'NOT IN'
-}
 
 
 def constraints_to_sql(**constraints):
