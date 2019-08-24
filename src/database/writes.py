@@ -9,10 +9,10 @@ from src.database.queries import get_comment_or_none
 from src.database.queries import insert_comment
 from src.database.queries import insert_channel
 from src.database.queries import get_claim_ids_from_comment_ids
-from src.server.misc import is_authentic_delete_signal
-from src.server.misc import request_lbrynet
 from src.server.misc import validate_signature_from_claim
 from src.server.misc import channel_matches_pattern_or_error
+from src.server.misc import get_claim_from_id
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +41,9 @@ async def abandon_comment(app, comment_id):
     return await coroutine(delete_comment_by_id)(app['writer'], comment_id)
 
 
-async def abandon_comment_if_authorized(app, comment_id, **kwargs):
-    authorized = await is_authentic_delete_signal(app, comment_id, **kwargs)
-    if not authorized:
+async def abandon_comment_if_authorized(app, comment_id, channel_id, signature, signing_ts, **kwargs):
+    claim = await get_claim_from_id(app, channel_id)
+    if not validate_signature_from_claim(claim, signature, signing_ts, comment_id):
         return False
 
     job = await app['comment_scheduler'].spawn(abandon_comment(app, comment_id))
@@ -58,10 +58,6 @@ async def hide_comments(app, comment_ids):
     return await coroutine(hide_comments_by_id)(app['writer'], comment_ids)
 
 
-async def claim_search(app, **kwargs):
-    return (await request_lbrynet(app, 'claim_search', **kwargs))['items'][0]
-
-
 async def hide_comments_where_authorized(app, pieces: list):
     comment_cids = get_claim_ids_from_comment_ids(
         conn=app['reader'],
@@ -73,7 +69,7 @@ async def hide_comments_where_authorized(app, pieces: list):
     for p in pieces:
         claim_id = comment_cids[p['comment_id']]
         if claim_id not in claims:
-            claims[claim_id] = await claim_search(app, claim_id=claim_id, no_totals=True)
+            claims[claim_id] = await get_claim_from_id(app, claim_id, no_totals=True)
         channel = claims[claim_id].get('signing_channel')
         if validate_signature_from_claim(channel, p['signature'], p['signing_ts'], p['comment_id']):
             comments_to_hide.append(p['comment_id'])

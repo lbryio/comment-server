@@ -1,10 +1,5 @@
-import unittest
-import atexit
 import os
-from multiprocessing.pool import Pool
-import asyncio
 import aiohttp
-import requests
 import re
 from itertools import *
 
@@ -64,7 +59,12 @@ class ServerTest(AsyncioTestCase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.url = 'http://' + config['HOST'] + ':5921/api'
+        self.host = 'localhost'
+        self.port = 5931
+
+    @property
+    def url(self):
+        return f'http://{self.host}:{self.port}/api'
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -74,7 +74,7 @@ class ServerTest(AsyncioTestCase):
     async def asyncSetUp(self):
         await super().asyncSetUp()
         self.server = app.CommentDaemon(config, db_file=self.db_file)
-        await self.server.start()
+        await self.server.start(host=self.host, port=self.port)
         self.addCleanup(self.server.stop)
 
     async def post_comment(self, **params):
@@ -199,24 +199,30 @@ class ListCommentsTest(AsyncioTestCase):
         'signature': nothing,
         'parent_id': nothing
     }
-    db_file = 'list_test.db'
-    url = 'http://localhost:5921/api'
-    comment_ids = None
-    claim_id = '1d8a5cc39ca02e55782d619e67131c0a20843be8'
 
-    @classmethod
-    async def post_comment(cls, **params):
-        return await jsonrpc_post(cls.url, 'create_comment', **params)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.host = 'localhost'
+        self.port = 5931
+        self.db_file = 'list_test.db'
+        self.claim_id = '1d8a5cc39ca02e55782d619e67131c0a20843be8'
+        self.comment_ids = None
 
-    @classmethod
-    def tearDownClass(cls) -> None:
+    @property
+    def url(self):
+        return f'http://{self.host}:{self.port}/api'
+
+    async def post_comment(self, **params):
+        return await jsonrpc_post(self.url, 'create_comment', **params)
+
+    def tearDown(self) -> None:
         print('exit reached')
-        os.remove(cls.db_file)
+        os.remove(self.db_file)
 
     async def asyncSetUp(self):
         await super().asyncSetUp()
         self.server = app.CommentDaemon(config, db_file=self.db_file)
-        await self.server.start()
+        await self.server.start(self.host, self.port)
         self.addCleanup(self.server.stop)
         if self.comment_ids is None:
             self.comment_list = [{key: self.replace[key]() for key in self.replace.keys()} for _ in range(23)]
@@ -226,8 +232,9 @@ class ListCommentsTest(AsyncioTestCase):
                                 for comm in self.comment_list]
 
     async def testListComments(self):
-        response_one = await jsonrpc_post(self.url, 'get_claim_comments', page_size=20,
-                                    page=1, top_level=1, claim_id=self.claim_id)
+        response_one = await jsonrpc_post(
+            self.url, 'get_claim_comments', page_size=20, page=1, top_level=1, claim_id=self.claim_id
+        )
         self.assertIsNotNone(response_one)
         self.assertIn('result', response_one)
         response_one: dict = response_one['result']

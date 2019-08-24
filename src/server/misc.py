@@ -59,6 +59,10 @@ async def request_lbrynet(app, method, **params):
         raise Exception("Server cannot verify delete signature")
 
 
+async def get_claim_from_id(app, claim_id, **kwargs):
+    return (await request_lbrynet(app, 'claim_search', no_totals=True, claim_id=claim_id, **kwargs))['items'][0]
+
+
 def get_encoded_signature(signature):
     signature = signature.encode() if type(signature) is str else signature
     r = int(signature[:int(len(signature) / 2)], 16)
@@ -107,21 +111,6 @@ def is_valid_credential_input(channel_id=None, channel_name=None, signature=None
         except Exception:
             return False
     return True
-
-
-async def is_authentic_delete_signal(app, comment_id, channel_name, channel_id, signature, signing_ts):
-    lbry_url = f'lbry://{channel_name}#{channel_id}'
-    claim = await request_lbrynet(app, 'resolve', urls=[lbry_url])
-    if claim:
-        public_key = claim['value']['public_key']
-        claim_hash = binascii.unhexlify(claim['claim_id'].encode())[::-1]
-        pieces_injest = b''.join((signing_ts.encode(), claim_hash, comment_id.encode()))
-        return is_signature_valid(
-            encoded_signature=get_encoded_signature(signature),
-            signature_digest=hashlib.sha256(pieces_injest).digest(),
-            public_key_bytes=binascii.unhexlify(public_key.encode())
-        )
-    return False
 
 
 def validate_signature_from_claim(claim, signature, signing_ts, data: str):

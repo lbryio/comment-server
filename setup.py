@@ -23,6 +23,6 @@ setup(
         'aiosqlite==0.10.0',
         'PyNaCl>=1.3.0',
         'requests',
-        'cython',  # Not really needed anymore but w/e
+        'cython',
     ]
 )
