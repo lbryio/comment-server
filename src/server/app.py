@@ -27,7 +27,7 @@ async def setup_db_schema(app):
 async def database_backup_routine(app):
     try:
         while True:
-            await asyncio.sleep(app['config']['BACKUP_INT'])
+            await asyncio.sleep(app['config']['backup_int'])
             with app['reader'] as conn:
                 logger.debug('backing up database')
                 backup_database(conn, app['backup'])
@@ -59,14 +59,14 @@ async def close_comment_scheduler(app):
 
 class CommentDaemon:
     def __init__(self, config, db_file=None, backup=None, **kwargs):
-        self.config = config
         app = web.Application()
         app['config'] = config
+        self.config = app['config']
         if db_file:
             app['db_path'] = db_file
             app['backup'] = backup
         else:
-            app['db_path'] = config['PATH']['DATABASE']
+            app['db_path'] = config['path']['database']
             app['backup'] = backup or (app['db_path'] + '.backup')
         app.on_startup.append(setup_db_schema)
         app.on_startup.append(start_background_tasks)
@@ -83,16 +83,16 @@ class CommentDaemon:
         self.app_site = None
 
     async def start(self, host=None, port=None):
-        self.app['START_TIME'] = time.time()
+        self.app['start_time'] = time.time()
         self.app_runner = web.AppRunner(self.app)
         await self.app_runner.setup()
         self.app_site = web.TCPSite(
             runner=self.app_runner,
-            host=host or self.config['HOST'],
-            port=port or self.config['PORT'],
+            host=host or self.config['host'],
+            port=port or self.config['port'],
         )
         await self.app_site.start()
-        logger.info(f'Comment Server is running on {self.config["HOST"]}:{self.config["PORT"]}')
+        logger.info(f'Comment Server is running on {self.config["host"]}:{self.config["port"]}')
 
     async def stop(self):
         await self.app_runner.shutdown()
