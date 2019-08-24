@@ -10,6 +10,5 @@ jobs:
       install:
         - pip install -e .
         - mkdir database
-        - mkdir logs
       script:
         - python -m unittest
