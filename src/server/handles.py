@@ -129,5 +129,5 @@ async def get_api_endpoint(request: web.Request):
     return web.json_response({
         'text': 'OK',
         'is_running': True,
-        'uptime': int(time.time()) - request.app['START_TIME']
+        'uptime': int(time.time()) - request.app['start_time']
     })

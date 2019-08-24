@@ -13,12 +13,12 @@ def config_logging_from_settings(conf):
         "disable_existing_loggers": False,
         "formatters": {
             "standard": {
-                "format": conf['LOGGING']['FORMAT'],
-                "datefmt": conf['LOGGING']['DATEFMT']
+                "format": conf['logging']['format'],
+                "datefmt": conf['logging']['datefmt']
             },
             "aiohttp": {
-                "format": conf['LOGGING']['AIOHTTP_FORMAT'],
-                "datefmt": conf['LOGGING']['DATEFMT']
+                "format": conf['logging']['aiohttp_format'],
+                "datefmt": conf['logging']['datefmt']
             }
         },
         "handlers": {
@@ -32,7 +32,7 @@ def config_logging_from_settings(conf):
                 "level": "DEBUG",
                 "formatter": "standard",
                 "class": "logging.handlers.RotatingFileHandler",
-                "filename": conf['PATH']['DEBUG_LOG'],
+                "filename": conf['path']['debug_log'],
                 "maxBytes": 10485760,
                 "backupCount": 5
             },
@@ -40,7 +40,7 @@ def config_logging_from_settings(conf):
                 "level": "ERROR",
                 "formatter": "standard",
                 "class": "logging.handlers.RotatingFileHandler",
-                "filename": conf['PATH']['ERROR_LOG'],
+                "filename": conf['path']['error_log'],
                 "maxBytes": 10485760,
                 "backupCount": 5
             },
@@ -48,7 +48,7 @@ def config_logging_from_settings(conf):
                 "level": "NOTSET",
                 "formatter": "aiohttp",
                 "class": "logging.handlers.RotatingFileHandler",
-                "filename": conf['PATH']['SERVER_LOG'],
+                "filename": conf['path']['server_log'],
                 "maxBytes": 10485760,
                 "backupCount": 5
             }
@@ -77,7 +77,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     config_logging_from_settings(config)
     if args.port:
-        config['PORT'] = args.port
+        config['port'] = args.port
     config_logging_from_settings(config)
     run_app(config)
 

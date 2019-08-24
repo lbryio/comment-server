@@ -44,7 +44,7 @@ def make_error(error, exc=None) -> dict:
 async def request_lbrynet(app, method, **params):
     body = {'method': method, 'params': {**params}}
     try:
-        async with aiohttp.request('POST', app['config']['LBRYNET'], json=body) as req:
+        async with aiohttp.request('POST', app['config']['lbrynet'], json=body) as req:
             try:
                 resp = await req.json()
             except JSONDecodeError as jde:

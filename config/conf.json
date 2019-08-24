@@ -1,17 +1,17 @@
 {
-  "PATH": {
-    "DATABASE": "database/default.db",
-    "ERROR_LOG": "logs/error.log",
-    "DEBUG_LOG": "logs/debug.log",
-    "SERVER_LOG": "logs/server.log"
+  "path": {
+    "database": "database/default.db",
+    "error_log": "logs/error.log",
+    "debug_log": "logs/debug.log",
+    "server_log": "logs/server.log"
   },
-  "LOGGING": {
-    "FORMAT":  "%(asctime)s | %(levelname)s | %(name)s | %(module)s.%(funcName)s:%(lineno)d | %(message)s",
-    "AIOHTTP_FORMAT": "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-    "DATEFMT": "%Y-%m-%d %H:%M:%S"
+  "logging": {
+    "format":  "%(asctime)s | %(levelname)s | %(name)s | %(module)s.%(funcName)s:%(lineno)d | %(message)s",
+    "aiohttp_format": "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    "datefmt": "%Y-%m-%d %H:%M:%S"
   },
-  "HOST": "localhost",
-  "PORT": 5921,
-  "BACKUP_INT": 3600,
-  "LBRYNET": "http://localhost:5279"
+  "host": "localhost",
+  "port": 5921,
+  "backup_int": 3600,
+  "lbrynet": "http://localhost:5279"
 }
