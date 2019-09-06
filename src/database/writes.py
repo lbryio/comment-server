@@ -3,16 +3,15 @@ import sqlite3
 
 from asyncio import coroutine
 
-from src.database.queries import hide_comments_by_id
 from src.database.queries import delete_comment_by_id
-from src.database.queries import get_comment_or_none
-from src.database.queries import insert_comment
-from src.database.queries import insert_channel
 from src.database.queries import get_claim_ids_from_comment_ids
-from src.server.misc import validate_signature_from_claim
+from src.database.queries import get_comment_or_none
+from src.database.queries import hide_comments_by_id
+from src.database.queries import insert_channel
+from src.database.queries import insert_comment
 from src.server.misc import channel_matches_pattern_or_error
 from src.server.misc import get_claim_from_id
-
+from src.server.misc import validate_signature_from_claim
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +21,13 @@ def create_comment_or_error(conn, comment, claim_id, channel_id=None, channel_na
     if channel_id or channel_name or signature or signing_ts:
         insert_channel_or_error(conn, channel_name, channel_id)
     comment_id = insert_comment(
-        conn=conn, comment=comment, claim_id=claim_id, channel_id=channel_id,
-        signature=signature, parent_id=parent_id, signing_ts=signing_ts
+        conn=conn,
+        comment=comment,
+        claim_id=claim_id,
+        channel_id=channel_id,
+        signature=signature,
+        parent_id=parent_id,
+        signing_ts=signing_ts
     )
     return get_comment_or_none(conn, comment_id)
 
