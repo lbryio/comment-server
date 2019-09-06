@@ -1,19 +1,18 @@
 import binascii
+import hashlib
 import logging
 import re
 from json import JSONDecodeError
 
-import hashlib
 import aiohttp
-
 import ecdsa
 from aiohttp import ClientConnectorError
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.serialization import load_der_public_key
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import Prehashed
-from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.serialization import load_der_public_key
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +129,7 @@ def validate_signature_from_claim(claim, signature, signing_ts, data: str):
 
 def clean_input_params(kwargs: dict):
     for k, v in kwargs.items():
-        if type(v) is str:
+        if type(v) is str and k is not 'comment':
             kwargs[k] = v.strip()
             if k in ID_LIST:
                 kwargs[k] = v.lower()
