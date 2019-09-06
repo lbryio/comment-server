@@ -1,5 +1,6 @@
 # LBRY Comment Server
 
+[![Build Status](https://travis-ci.com/lbryio/comment-server.svg?branch=master)](https://travis-ci.com/lbryio/comment-server)
 [![Maintainability](https://api.codeclimate.com/v1/badges/22f420b8b5f2373fd885/maintainability)](https://codeclimate.com/github/lbryio/comment-server/maintainability)  
 
 This is the code for the LBRY Comment Server. 
