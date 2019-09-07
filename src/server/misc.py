@@ -31,11 +31,18 @@ ERRORS = {
 }
 
 
-def make_error(error, exc=None) -> dict:
+def make_error(error, exc=None, app=None) -> dict:
     body = ERRORS[error] if error in ERRORS else ERRORS['INTERNAL']
     try:
         if exc:
-            body.update({type(exc).__name__: str(exc)})
+            exc_name = type(exc).__name__
+            body.update({exc_name: str(exc)})
+
+            if app:
+                app['errors'].put_nowait({
+                    "text": f"Got `{exc_name}`: ```\n{exc}```"
+                })
+
     finally:
         return body
 

@@ -3,10 +3,13 @@ import logging
 import pathlib
 import signal
 import time
+import queue
+
 
 import aiojobs
 import aiojobs.aiohttp
 import asyncio
+import aiohttp
 from aiohttp import web
 
 from src.database.queries import setup_database, backup_database
@@ -35,12 +38,33 @@ async def database_backup_routine(app):
         pass
 
 
+async def post_errors_to_slack(client, app):
+    while app['errors'].qsize() > 0:
+        msg = app['errors'].get_nowait()
+        if 'slack_webhook' in app['config']:
+            await client.post(app['config']['slack_webhook'], json=msg)
+
+
+async def report_errors_to_slack_webhook(app):
+    async with aiohttp.ClientSession() as client:
+        try:
+            while True:
+                await asyncio.shield(post_errors_to_slack(client, app))
+                await asyncio.sleep(300)
+
+        except asyncio.CancelledError:
+            await asyncio.shield(post_errors_to_slack(client, app))
+
+
 async def start_background_tasks(app):
     app['reader'] = obtain_connection(app['db_path'], True)
     app['waitful_backup'] = asyncio.create_task(database_backup_routine(app))
     app['comment_scheduler'] = await aiojobs.create_scheduler(limit=1, pending_limit=0)
     app['db_writer'] = DatabaseWriter(app['db_path'])
     app['writer'] = app['db_writer'].connection
+
+    app['errors'] = queue.Queue()
+    app['slack_webhook'] = asyncio.create_task(report_errors_to_slack_webhook(app))
 
 
 async def close_database_connections(app):
@@ -50,6 +74,11 @@ async def close_database_connections(app):
     app['reader'].close()
     app['writer'].close()
     app['db_writer'].cleanup()
+
+
+async def stop_reporting_errors(app):
+    app['slack_webhook'].cancel()
+    await app['slack_webhook']
 
 
 async def close_comment_scheduler(app):
@@ -72,6 +101,7 @@ class CommentDaemon:
         app.on_startup.append(start_background_tasks)
         app.on_shutdown.append(close_comment_scheduler)
         app.on_cleanup.append(close_database_connections)
+        app.on_cleanup.append(stop_reporting_errors)
         aiojobs.aiohttp.setup(app, **kwargs)
         app.add_routes([
             web.post('/api', api_endpoint),
