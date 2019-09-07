@@ -7,7 +7,6 @@ import asyncio
 import aiohttp
 
 from src.server.misc import is_signature_valid, get_encoded_signature
-from src.server.database import clean
 
 
 async def request_lbrynet(url, method, **params):
