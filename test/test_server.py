@@ -13,6 +13,10 @@ from src.server import app
 from test.testcase import AsyncioTestCase
 
 
+if 'slack_webhook' in config:
+    config.pop('slack_webhook')
+
+
 fake = faker.Faker()
 fake.add_provider(internet)
 fake.add_provider(lorem)

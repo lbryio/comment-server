@@ -91,11 +91,12 @@ async def process_json(app, body: dict) -> dict:
                 result = METHODS[method](app, params)
             response['result'] = result
         except Exception as err:
-            logger.exception(f'Got {type(err).__name__}: {err}')
+            logger.exception(f'Got {type(err).__name__}:')
             if type(err) in (ValueError, TypeError):
-                response['error'] = make_error('INVALID_PARAMS', err)
+                response['error'] = make_error('INVALID_PARAMS', err, app)
             else:
-                response['error'] = make_error('INTERNAL', err)
+                response['error'] = make_error('INTERNAL', err, app)
+
         finally:
             end = time.time()
             logger.debug(f'Time taken to process {method}: {end - start} secs')
@@ -122,7 +123,7 @@ async def api_endpoint(request: web.Request):
             else:
                 return web.json_response(await process_json(request.app, body))
     except Exception as e:
-        return make_error('INVALID_REQUEST', e)
+        return make_error('INVALID_REQUEST', e, request.app)
 
 
 async def get_api_endpoint(request: web.Request):
