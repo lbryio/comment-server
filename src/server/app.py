@@ -50,7 +50,7 @@ async def report_errors_to_slack_webhook(app):
         try:
             while True:
                 await asyncio.shield(post_errors_to_slack(client, app))
-                await asyncio.sleep(300)
+                await asyncio.sleep(10)
 
         except asyncio.CancelledError:
             await asyncio.shield(post_errors_to_slack(client, app))
