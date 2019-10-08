@@ -243,7 +243,7 @@ class ListCommentsTest(AsyncioTestCase):
         self.assertIn('result', response_one)
         response_one: dict = response_one['result']
         self.assertIs(type(response_one), dict)
-        self.assertEquals(response_one['page_size'], len(response_one['items']))
+        self.assertEqual(response_one['page_size'], len(response_one['items']))
         self.assertIn('items', response_one)
         self.assertGreaterEqual(response_one['total_pages'], response_one['page'])
         last_page = response_one['total_pages']
