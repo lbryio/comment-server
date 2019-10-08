@@ -110,7 +110,7 @@ For more details, please refer to [lbry.tech/contribute](https://lbry.tech/contr
 
 ## License
 This project is licensed by AGPLv3. 
-See [LICENSE](LICENSE.nd) for the full license.
+See [LICENSE](LICENSE.md) for the full license.
 
 ## Security 
 We take security seriously. 
