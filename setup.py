@@ -18,7 +18,7 @@ setup(
         'asyncio>=3.4.3',
         'aiohttp==3.5.4',
         'aiojobs==0.2.2',
-        'ecdsa==0.13',
+        'ecdsa>=0.13.3',
         'cryptography==2.5',
         'aiosqlite==0.10.0',
         'PyNaCl>=1.3.0',
