@@ -223,28 +223,34 @@ class ListCommentsTest(AsyncioTestCase):
         print('exit reached')
         os.remove(self.db_file)
 
+    async def create_lots_of_comments(self, n=23):
+        self.comment_list = [{key: self.replace[key]() for key in self.replace.keys()} for _ in range(23)]
+        for comment in self.comment_list:
+            comment['claim_id'] = self.claim_id
+        self.comment_ids = [(await self.post_comment(**comm))['result']['comment_id']
+                            for comm in self.comment_list]
+
     async def asyncSetUp(self):
         await super().asyncSetUp()
         self.server = app.CommentDaemon(config, db_file=self.db_file)
         await self.server.start(self.host, self.port)
         self.addCleanup(self.server.stop)
-        if self.comment_ids is None:
-            self.comment_list = [{key: self.replace[key]() for key in self.replace.keys()} for _ in range(23)]
-            for comment in self.comment_list:
-                comment['claim_id'] = self.claim_id
-            self.comment_ids = [(await self.post_comment(**comm))['result']['comment_id']
-                                for comm in self.comment_list]
 
     async def testListComments(self):
+        await self.create_lots_of_comments()
         response_one = await jsonrpc_post(
             self.url, 'get_claim_comments', page_size=20, page=1, top_level=1, claim_id=self.claim_id
         )
         self.assertIsNotNone(response_one)
         self.assertIn('result', response_one)
         response_one: dict = response_one['result']
-        self.assertIs(type(response_one), dict)
         self.assertEqual(response_one['page_size'], len(response_one['items']))
         self.assertIn('items', response_one)
+
+        comments = response_one['items']
+        hidden = list(filter(lambda c: c['is_hidden'], comments))
+        self.assertEqual(hidden, [])
+
         self.assertGreaterEqual(response_one['total_pages'], response_one['page'])
         last_page = response_one['total_pages']
         response = await jsonrpc_post(self.url, 'get_claim_comments', page_size=20,
