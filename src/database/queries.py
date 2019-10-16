@@ -119,10 +119,19 @@ def insert_comment(conn: sqlite3.Connection, claim_id: str, comment: str, parent
         conn.execute(
             """
             INSERT INTO COMMENT(CommentId, LbryClaimId, ChannelId, Body, ParentId, 
-                                    Timestamp, Signature, SigningTs) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
-            """,
-            (comment_id, claim_id, channel_id, comment, parent_id, timestamp, signature, signing_ts)
+                                    Timestamp, Signature, SigningTs, IsHidden) 
+            VALUES (:comment_id, :claim_id, :channel_id, :comment, :parent_id,
+                    :timestamp, :signature, :signing_ts, 0) """,
+            {
+                'comment_id': comment_id,
+                'claim_id': claim_id,
+                'channel_id': channel_id,
+                'comment': comment,
+                'parent_id': parent_id,
+                'timestamp': timestamp,
+                'signature': signature,
+                'signing_ts': signing_ts
+            }
         )
     logging.info('Inserted Comment into DB, `comment_id`: %s', comment_id)
     return comment_id
