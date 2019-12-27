@@ -5,16 +5,13 @@ import asyncio
 from aiohttp import web
 from aiojobs.aiohttp import atomic
 
-from src.server.misc import clean_input_params
+from src.server.misc import clean_input_params, report_error
 from src.database.queries import get_claim_comments
 from src.database.queries import get_comments_by_id, get_comment_ids
 from src.database.queries import get_channel_id_from_comment_id
 from src.database.queries import get_claim_hidden_comments
-from src.server.misc import is_valid_base_comment
-from src.server.misc import is_valid_credential_input
 from src.server.misc import make_error
-from src.database.writes import abandon_comment_if_authorized
-from src.database.writes import write_comment
+from src.database.writes import abandon_comment_if_authorized, create_comment
 from src.database.writes import hide_comments_where_authorized
 
 
@@ -47,11 +44,7 @@ def handle_get_claim_hidden_comments(app, kwargs):
 
 
 async def handle_create_comment(app, params):
-    if is_valid_base_comment(**params) and is_valid_credential_input(**params):
-        job = await app['comment_scheduler'].spawn(write_comment(app, params))
-        return await job.wait()
-    else:
-        raise ValueError('base comment is invalid')
+    return await create_comment(app, params)
 
 
 async def handle_abandon_comment(app, params):
@@ -59,7 +52,7 @@ async def handle_abandon_comment(app, params):
 
 
 async def handle_hide_comments(app, params):
-    return await hide_comments_where_authorized(app, **params)
+    return {'hidden': await hide_comments_where_authorized(app, **params)}
 
 
 METHODS = {
@@ -92,10 +85,11 @@ async def process_json(app, body: dict) -> dict:
             response['result'] = result
         except Exception as err:
             logger.exception(f'Got {type(err).__name__}:')
-            if type(err) in (ValueError, TypeError):
-                response['error'] = make_error('INVALID_PARAMS', err, app)
+            if type(err) in (ValueError, TypeError):  # param error, not too important
+                response['error'] = make_error('INVALID_PARAMS', err)
             else:
-                response['error'] = make_error('INTERNAL', err, app)
+                response['error'] = make_error('INTERNAL', err)
+                await app['webhooks'].spawn(report_error(app, err))
 
         finally:
             end = time.time()
@@ -123,7 +117,7 @@ async def api_endpoint(request: web.Request):
             else:
                 return web.json_response(await process_json(request.app, body))
     except Exception as e:
-        return make_error('INVALID_REQUEST', e, request.app)
+        return make_error('INVALID_REQUEST', e)
 
 
 async def get_api_endpoint(request: web.Request):

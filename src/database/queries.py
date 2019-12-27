@@ -179,7 +179,7 @@ def get_comments_by_id(conn, comment_ids: typing.Union[list, tuple]) -> typing.U
         )]
 
 
-def delete_comment_by_id(conn: sqlite3.Connection, comment_id: str):
+def delete_comment_by_id(conn: sqlite3.Connection, comment_id: str) -> bool:
     with conn:
         curs = conn.execute("DELETE FROM COMMENT WHERE CommentId = ?", (comment_id,))
         return bool(curs.rowcount)
@@ -209,7 +209,7 @@ def get_claim_ids_from_comment_ids(conn: sqlite3.Connection, comment_ids: list):
         return {row['comment_id']: row['claim_id'] for row in cids.fetchall()}
 
 
-def hide_comments_by_id(conn: sqlite3.Connection, comment_ids: list):
+def hide_comments_by_id(conn: sqlite3.Connection, comment_ids: list) -> bool:
     with conn:
         curs = conn.cursor()
         curs.executemany(

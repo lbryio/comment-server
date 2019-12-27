@@ -3,13 +3,17 @@ import sqlite3
 
 from asyncio import coroutine
 
-from src.database.queries import delete_comment_by_id
+from src.database.queries import delete_comment_by_id, get_comments_by_id
 from src.database.queries import get_claim_ids_from_comment_ids
 from src.database.queries import get_comment_or_none
 from src.database.queries import hide_comments_by_id
 from src.database.queries import insert_channel
 from src.database.queries import insert_comment
-from src.server.misc import channel_matches_pattern_or_error
+from src.server.misc import channel_matches_pattern_or_error, create_notification_batch
+from src.server.misc import is_valid_base_comment
+from src.server.misc import is_valid_credential_input
+from src.server.misc import send_notification
+from src.server.misc import send_notifications
 from src.server.misc import get_claim_from_id
 from src.server.misc import validate_signature_from_claim
 
@@ -41,8 +45,22 @@ def insert_channel_or_error(conn: sqlite3.Connection, channel_name: str, channel
         raise ValueError('Received invalid values for channel_id or channel_name')
 
 
-async def abandon_comment(app, comment_id):
+""" COROUTINE WRAPPERS """
+
+
+async def write_comment(app, params):  # CREATE
+    return await coroutine(create_comment_or_error)(app['writer'], **params)
+
+
+async def hide_comments(app, comment_ids):  # UPDATE
+    return await coroutine(hide_comments_by_id)(app['writer'], comment_ids)
+
+
+async def abandon_comment(app, comment_id):  # DELETE
     return await coroutine(delete_comment_by_id)(app['writer'], comment_id)
+
+
+""" Core Functions called by request handlers """
 
 
 async def abandon_comment_if_authorized(app, comment_id, channel_id, signature, signing_ts, **kwargs):
@@ -50,19 +68,26 @@ async def abandon_comment_if_authorized(app, comment_id, channel_id, signature, 
     if not validate_signature_from_claim(claim, signature, signing_ts, comment_id):
         return False
 
+    comment = get_comment_or_none(app['reader'], comment_id)
     job = await app['comment_scheduler'].spawn(abandon_comment(app, comment_id))
+    await app['webhooks'].spawn(send_notification(app, 'DELETE', comment))
     return await job.wait()
 
 
-async def write_comment(app, params):
-    return await coroutine(create_comment_or_error)(app['writer'], **params)
+async def create_comment(app, params):
+    if is_valid_base_comment(**params) and is_valid_credential_input(**params):
+        job = await app['comment_scheduler'].spawn(write_comment(app, params))
+        comment = await job.wait()
+        if comment:
+            await app['webhooks'].spawn(
+                send_notification(app, 'CREATE', comment)
+            )
+        return comment
+    else:
+        raise ValueError('base comment is invalid')
 
 
-async def hide_comments(app, comment_ids):
-    return await coroutine(hide_comments_by_id)(app['writer'], comment_ids)
-
-
-async def hide_comments_where_authorized(app, pieces: list):
+async def hide_comments_where_authorized(app, pieces: list) -> list:
     comment_cids = get_claim_ids_from_comment_ids(
         conn=app['reader'],
         comment_ids=[p['comment_id'] for p in pieces]
@@ -76,10 +101,15 @@ async def hide_comments_where_authorized(app, pieces: list):
             claims[claim_id] = await get_claim_from_id(app, claim_id, no_totals=True)
         channel = claims[claim_id].get('signing_channel')
         if validate_signature_from_claim(channel, p['signature'], p['signing_ts'], p['comment_id']):
-            comments_to_hide.append(p['comment_id'])
+            comments_to_hide.append(p)
 
-    if comments_to_hide:
-        job = await app['comment_scheduler'].spawn(hide_comments(app, comments_to_hide))
-        await job.wait()
+    comment_ids = [c['comment_id'] for c in comments_to_hide]
+    job = await app['comment_scheduler'].spawn(hide_comments(app, comment_ids))
+    await app['webhooks'].spawn(
+        send_notifications(
+            app, 'UPDATE', get_comments_by_id(app['reader'], comment_ids)
+        )
+    )
 
-    return {'hidden': comments_to_hide}
+    await job.wait()
+    return comment_ids

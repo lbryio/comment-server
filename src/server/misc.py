@@ -3,6 +3,7 @@ import hashlib
 import logging
 import re
 from json import JSONDecodeError
+from typing import List
 
 import aiohttp
 import ecdsa
@@ -31,20 +32,63 @@ ERRORS = {
 }
 
 
-def make_error(error, exc=None, app=None) -> dict:
+def make_error(error, exc=None) -> dict:
     body = ERRORS[error] if error in ERRORS else ERRORS['INTERNAL']
     try:
         if exc:
             exc_name = type(exc).__name__
             body.update({exc_name: str(exc)})
 
-            if app:
-                app['errors'].put_nowait({
-                    "text": f"Got `{exc_name}`: ```\n{exc}```"
-                })
-
     finally:
         return body
+
+
+async def report_error(app, exc, msg=''):
+    try:
+        if 'slack_webhook' in app['config']:
+            if msg:
+                msg = f'"{msg}"'
+            body = {
+                "text": f"Got `{type(exc).__name__}`: ```\n{str(exc)}```\n{msg}"
+            }
+            async with aiohttp.ClientSession() as sesh:
+                async with sesh.post(app['config']['slack_webhook'], json=body) as resp:
+                    await resp.wait_for_close()
+
+    except Exception:
+        logger.critical('Error while logging to slack webhook')
+
+
+async def send_notifications(app, action: str, comments: List[dict]):
+    events = create_notification_batch(action, comments)
+    async with aiohttp.ClientSession() as session:
+        for event in events:
+            event.update(auth_token=app['config']['notifications']['auth_token'])
+            try:
+                async with session.get(app['config']['notifications']['url'], params=event) as resp:
+                    logger.debug(f'Completed Notification: {await resp.text()}, HTTP Status: {resp.status}')
+            except Exception:
+                logger.exception(f'Error requesting internal API, Status {resp.status}: {resp.text()}, '
+                                 f'comment_id: {event["comment_id"]}')
+
+
+async def send_notification(app, action: str, comment: dict):
+    await send_notifications(app, action, [comment])
+
+
+def create_notification_batch(action: str, comments: List[dict]) -> List[dict]:
+    action_type = action[0].capitalize()  # to turn Create -> C, edit -> U, delete -> D
+    events = []
+    for comment in comments:
+        event = {
+            'action_type': action_type,
+            'comment_id': comment['comment_id'],
+            'claim_id': comment['claim_id']
+        }
+        if comment.get('channel_id'):
+            event['channel_id'] = comment['channel_id']
+        events.append(event)
+    return events
 
 
 async def request_lbrynet(app, method, **params):
@@ -66,7 +110,7 @@ async def request_lbrynet(app, method, **params):
 
 
 async def get_claim_from_id(app, claim_id, **kwargs):
-    return (await request_lbrynet(app, 'claim_search', no_totals=True, claim_id=claim_id, **kwargs))['items'][0]
+    return (await request_lbrynet(app, 'claim_search', claim_id=claim_id, **kwargs))['items'][0]
 
 
 def get_encoded_signature(signature):

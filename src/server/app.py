@@ -38,33 +38,18 @@ async def database_backup_routine(app):
         pass
 
 
-async def post_errors_to_slack(client, app):
-    while app['errors'].qsize() > 0:
-        msg = app['errors'].get_nowait()
-        if 'slack_webhook' in app['config']:
-            await client.post(app['config']['slack_webhook'], json=msg)
-
-
-async def report_errors_to_slack_webhook(app):
-    async with aiohttp.ClientSession() as client:
-        try:
-            while True:
-                await asyncio.shield(post_errors_to_slack(client, app))
-                await asyncio.sleep(10)
-
-        except asyncio.CancelledError:
-            await asyncio.shield(post_errors_to_slack(client, app))
-
-
 async def start_background_tasks(app):
+    # Reading the DB
     app['reader'] = obtain_connection(app['db_path'], True)
     app['waitful_backup'] = asyncio.create_task(database_backup_routine(app))
+
+    # Scheduler to prevent multiple threads from writing to DB simulataneously
     app['comment_scheduler'] = await aiojobs.create_scheduler(limit=1, pending_limit=0)
     app['db_writer'] = DatabaseWriter(app['db_path'])
     app['writer'] = app['db_writer'].connection
 
-    app['errors'] = queue.Queue()
-    app['slack_webhook'] = asyncio.create_task(report_errors_to_slack_webhook(app))
+    # for requesting to external and internal APIs
+    app['webhooks'] = await aiojobs.create_scheduler(pending_limit=0)
 
 
 async def close_database_connections(app):
@@ -76,33 +61,38 @@ async def close_database_connections(app):
     app['db_writer'].cleanup()
 
 
-async def stop_reporting_errors(app):
-    app['slack_webhook'].cancel()
-    await app['slack_webhook']
-
-
-async def close_comment_scheduler(app):
+async def close_schedulers(app):
     logger.info('Closing comment_scheduler')
     await app['comment_scheduler'].close()
+
+    logger.info('Closing scheduler for webhook requests')
+    await app['webhooks'].close()
 
 
 class CommentDaemon:
     def __init__(self, config, db_file=None, backup=None, **kwargs):
         app = web.Application()
+
+        # configure the config
         app['config'] = config
         self.config = app['config']
+
+        # configure the db file
         if db_file:
             app['db_path'] = db_file
             app['backup'] = backup
         else:
             app['db_path'] = config['path']['database']
             app['backup'] = backup or (app['db_path'] + '.backup')
+
+        # configure the order of tasks to run during app lifetime
         app.on_startup.append(setup_db_schema)
         app.on_startup.append(start_background_tasks)
-        app.on_shutdown.append(close_comment_scheduler)
+        app.on_shutdown.append(close_schedulers)
         app.on_cleanup.append(close_database_connections)
-        app.on_cleanup.append(stop_reporting_errors)
         aiojobs.aiohttp.setup(app, **kwargs)
+
+        # Configure the routes
         app.add_routes([
             web.post('/api', api_endpoint),
             web.get('/', get_api_endpoint),
