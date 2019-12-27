@@ -13,5 +13,9 @@
   "host": "localhost",
   "port": 5921,
   "backup_int": 3600,
-  "lbrynet": "http://localhost:5279"
+  "lbrynet": "http://localhost:5279",
+  "notifications": {
+    "url": "https://api.lbry.com/event/comment",
+    "auth_token": "token goes here"
+  }
 }
