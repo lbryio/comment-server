@@ -1,10 +1,10 @@
-import logging.config
-import logging
 import argparse
+import logging
+import logging.config
 import sys
 
-from src.settings import config
 from src.server.app import run_app
+from src.settings import config
 
 
 def config_logging_from_settings(conf):

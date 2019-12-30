@@ -1,16 +1,15 @@
 import atexit
 import logging
+import math
 import sqlite3
 import time
 import typing
 
-import math
 import nacl.hash
 
 from src.database.schema import CREATE_TABLES_QUERY
 
 logger = logging.getLogger(__name__)
-
 
 SELECT_COMMENTS_ON_CLAIMS = """
     SELECT comment, comment_id, channel_name, channel_id, channel_url,
@@ -95,7 +94,7 @@ def get_claim_hidden_comments(conn: sqlite3.Connection, claim_id: str, hidden=Tr
         'items': results,
         'page': page,
         'page_size': page_size,
-        'total_pages': math.ceil(count/page_size),
+        'total_pages': math.ceil(count / page_size),
         'total_items': count,
         'has_hidden_comments': claim_has_hidden_comments(conn, claim_id)
     }
@@ -157,14 +156,14 @@ def get_comment_ids(conn: sqlite3.Connection, claim_id: str, parent_id: str = No
             curs = conn.execute("""
                     SELECT comment_id FROM COMMENTS_ON_CLAIMS
                     WHERE claim_id = ? AND parent_id IS NULL LIMIT ? OFFSET ?
-                """, (claim_id, page_size, page_size*abs(page - 1),)
-                                           )
+                """, (claim_id, page_size, page_size * abs(page - 1),)
+                                )
         else:
             curs = conn.execute("""
                     SELECT comment_id FROM COMMENTS_ON_CLAIMS
                     WHERE claim_id = ? AND parent_id = ? LIMIT ? OFFSET ?
                 """, (claim_id, parent_id, page_size, page_size * abs(page - 1),)
-                                           )
+                                )
     return [tuple(row)[0] for row in curs.fetchall()]
 
 

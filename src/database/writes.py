@@ -1,6 +1,5 @@
 import logging
 import sqlite3
-
 from asyncio import coroutine
 
 from src.database.queries import delete_comment_by_id, get_comments_by_id
@@ -38,7 +37,7 @@ def create_comment_or_error(conn, comment, claim_id, channel_id=None, channel_na
 
 def insert_channel_or_error(conn: sqlite3.Connection, channel_name: str, channel_id: str):
     try:
-        channel_matches_pattern_or_error(channel_id, channel_name)
+        is_valid_channel(channel_id, channel_name)
         insert_channel(conn, channel_name, channel_id)
     except AssertionError:
         logger.exception('Invalid channel values given')
@@ -61,17 +60,6 @@ async def abandon_comment(app, comment_id):  # DELETE
 
 
 """ Core Functions called by request handlers """
-
-
-async def abandon_comment_if_authorized(app, comment_id, channel_id, signature, signing_ts, **kwargs):
-    claim = await get_claim_from_id(app, channel_id)
-    if not validate_signature_from_claim(claim, signature, signing_ts, comment_id):
-        return False
-
-    comment = get_comment_or_none(app['reader'], comment_id)
-    job = await app['comment_scheduler'].spawn(abandon_comment(app, comment_id))
-    await app['webhooks'].spawn(send_notification(app, 'DELETE', comment))
-    return await job.wait()
 
 
 async def create_comment(app, params):
@@ -113,3 +101,20 @@ async def hide_comments_where_authorized(app, pieces: list) -> list:
 
     await job.wait()
     return comment_ids
+
+
+async def edit_comment(app, comment_id, new_comment, channel_id,
+                       channel_name, new_signature, new_signing_ts):
+
+    pass
+
+
+async def abandon_comment_if_authorized(app, comment_id, channel_id, signature, signing_ts, **kwargs):
+    channel = await get_claim_from_id(app, channel_id)
+    if not validate_signature_from_claim(channel, signature, signing_ts, comment_id):
+        return False
+
+    comment = get_comment_or_none(app['reader'], comment_id)
+    job = await app['comment_scheduler'].spawn(abandon_comment(app, comment_id))
+    await app['webhooks'].spawn(send_notification(app, 'DELETE', comment))
+    return await job.wait()
