@@ -8,13 +8,10 @@ from src.database.queries import get_comment_or_none
 from src.database.queries import hide_comments_by_id
 from src.database.queries import insert_channel
 from src.database.queries import insert_comment
-from src.server.misc import channel_matches_pattern_or_error, create_notification_batch
-from src.server.misc import is_valid_base_comment
-from src.server.misc import is_valid_credential_input
-from src.server.misc import send_notification
-from src.server.misc import send_notifications
+from server.validation import is_valid_channel, is_valid_base_comment, is_valid_credential_input, \
+    validate_signature_from_claim
 from src.server.misc import get_claim_from_id
-from src.server.misc import validate_signature_from_claim
+from server.external import send_notifications, send_notification
 
 logger = logging.getLogger(__name__)
 

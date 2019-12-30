@@ -1,6 +1,7 @@
 import os
+import random
+
 import aiohttp
-import re
 from itertools import *
 
 import faker
@@ -10,6 +11,9 @@ from faker.providers import misc
 
 from src.settings import config
 from src.server import app
+from src.server.validation import is_valid_channel
+from src.server.validation import is_valid_base_comment
+
 from test.testcase import AsyncioTestCase
 
 
