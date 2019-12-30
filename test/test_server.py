@@ -27,8 +27,20 @@ fake.add_provider(lorem)
 fake.add_provider(misc)
 
 
-def fake_lbryusername():
+def fake_lbryusername() -> str:
     return '@' + fake.user_name()
+
+
+def nothing():
+    pass
+
+
+def fake_signature() -> str:
+    return fake.sha256() + fake.sha256()
+
+
+def fake_signing_ts() -> str:
+    return str(random.randint(1, 2**32 - 1))
 
 
 async def jsonrpc_post(url, method, **params):
@@ -42,17 +54,14 @@ async def jsonrpc_post(url, method, **params):
         return await request.json()
 
 
-def nothing():
-    pass
-
-
 replace = {
     'claim_id': fake.sha1,
     'comment': fake.text,
     'channel_id': fake.sha1,
     'channel_name': fake_lbryusername,
-    'signature': fake.uuid4,
-    'parent_id': fake.sha256
+    'signature': fake_signature,
+    'signing_ts': fake_signing_ts,
+    'parent_id': fake.sha256,
 }
 
 
@@ -88,36 +97,21 @@ class ServerTest(AsyncioTestCase):
     async def post_comment(self, **params):
         return await jsonrpc_post(self.url, 'create_comment', **params)
 
-    def is_valid_message(self, comment=None, claim_id=None, parent_id=None,
+    @staticmethod
+    def is_valid_message(comment=None, claim_id=None, parent_id=None,
                          channel_name=None, channel_id=None, signature=None, signing_ts=None):
         try:
-            assert comment is not None and claim_id is not None
-            assert re.fullmatch('([a-f0-9]|[A-F0-9]){40}', claim_id)
-            assert 0 < len(comment) <= 2000
-            if parent_id is not None:
-                assert re.fullmatch('([a-f0-9]){64}', parent_id)
+            assert is_valid_base_comment(comment, claim_id, parent_id)
 
             if channel_name or channel_id or signature or signing_ts:
-                assert channel_id is not None and channel_name is not None
-                assert re.fullmatch('([a-f0-9]|[A-F0-9]){40}', channel_id)
-                assert self.valid_channel_name(channel_name)
-                assert (signature is None and signing_ts is None) or \
-                       (signature is not None and signing_ts is not None)
-                if signature:
-                    assert len(signature) == 128
-                if parent_id:
-                    assert parent_id.isalnum()
+                assert channel_id and channel_name and signature and signing_ts
+                assert is_valid_channel(channel_id, channel_name)
+                assert len(signature) == 128
+                assert signing_ts.isalnum()
+
         except Exception:
             return False
         return True
-
-    @staticmethod
-    def valid_channel_name(channel_name):
-        return re.fullmatch(
-            '^@(?:(?![\x00-\x08\x0b\x0c\x0e-\x1f\x23-\x26'
-            '\x2f\x3a\x3d\x3f-\x40\uFFFE-\U0000FFFF]).){1,255}$',
-            channel_name
-        )
 
     async def test01CreateCommentNoReply(self):
         anonymous_test = create_test_comments(
@@ -174,6 +168,8 @@ class ServerTest(AsyncioTestCase):
             channel_id=fake.sha1(),
             comment='Hello everybody and welcome back to my chan nel',
             claim_id=claim_id,
+            signing_ts='1234',
+            signature='_'*128
         )
         parent_id = parent_comment['result']['comment_id']
         test_all = create_test_comments(
@@ -204,7 +200,8 @@ class ListCommentsTest(AsyncioTestCase):
         'comment': fake.text,
         'channel_id': fake.sha1,
         'channel_name': fake_lbryusername,
-        'signature': nothing,
+        'signature': fake_signature,
+        'signing_ts': fake_signing_ts,
         'parent_id': nothing
     }
 
