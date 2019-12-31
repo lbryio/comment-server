@@ -218,6 +218,25 @@ def hide_comments_by_id(conn: sqlite3.Connection, comment_ids: list) -> bool:
         return bool(curs.rowcount)
 
 
+def edit_comment_by_id(conn: sqlite3.Connection, comment_id: str, comment: str,
+                       signature: str, signing_ts: str) -> bool:
+    with conn:
+        curs = conn.execute(
+            """
+                UPDATE COMMENT 
+                SET Body = :comment, Signature = :signature, SigningTs = :signing_ts
+                WHERE CommentId = :comment_id
+            """,
+            {
+                'comment': comment,
+                'signature': signature,
+                'signing_ts': signing_ts,
+                'comment_id': comment_id
+            })
+        logger.info("updated comment with `comment_id`: %s", comment_id)
+        return bool(curs.rowcount)
+
+
 class DatabaseWriter(object):
     _writer = None
 

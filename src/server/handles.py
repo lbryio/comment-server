@@ -9,8 +9,8 @@ from src.database.queries import get_channel_id_from_comment_id
 from src.database.queries import get_claim_comments
 from src.database.queries import get_claim_hidden_comments
 from src.database.queries import get_comments_by_id, get_comment_ids
-from src.database.writes import abandon_comment_if_authorized, create_comment
-from src.database.writes import hide_comments_where_authorized
+from src.database.writes import abandon_comment, create_comment
+from src.database.writes import hide_comments
 from src.server.misc import clean_input_params
 from src.server.errors import make_error, report_error
 
@@ -43,11 +43,16 @@ def handle_get_claim_hidden_comments(app, kwargs):
 
 
 async def handle_abandon_comment(app, params):
-    return {'abandoned': await abandon_comment_if_authorized(app, **params)}
+    return {'abandoned': await abandon_comment(app, **params)}
 
 
 async def handle_hide_comments(app, params):
-    return {'hidden': await hide_comments_where_authorized(app, **params)}
+    return {'hidden': await hide_comments(app, **params)}
+
+
+async def handle_edit_comment(app, params):
+    if handle_edit_comment(app, **params):
+        pass
 
 
 METHODS = {
@@ -60,7 +65,8 @@ METHODS = {
     'create_comment': create_comment,
     'delete_comment': handle_abandon_comment,
     'abandon_comment': handle_abandon_comment,
-    'hide_comments': handle_hide_comments
+    'hide_comments': handle_hide_comments,
+    'edit_comment': handle_edit_comment
 }
 
 
