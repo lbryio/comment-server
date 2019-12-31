@@ -101,20 +101,20 @@ async def hide_comments(app, pieces: list) -> list:
     return comment_ids
 
 
-async def edit_comment(app, comment_id: str, new_comment: str, channel_id: str,
+async def edit_comment(app, comment_id: str, comment: str, channel_id: str,
                        channel_name: str, signature: str, signing_ts: str):
     if not(is_valid_credential_input(channel_id, channel_name, signature, signing_ts)
-            and body_is_valid(new_comment)):
+            and body_is_valid(comment)):
         logging.error('Invalid argument values, check input and try again')
         return
 
-    comment = db.get_comment_or_none(app['reader'], comment_id)
-    if not(comment and 'channel_id' in comment and comment['channel_id'] == channel_id.lower()):
+    cmnt = db.get_comment_or_none(app['reader'], comment_id)
+    if not(cmnt and 'channel_id' in cmnt and cmnt['channel_id'] == channel_id.lower()):
         logging.error("comment doesnt exist")
         return
 
     channel = await get_claim_from_id(app, channel_id)
-    if not validate_signature_from_claim(channel, signature, signing_ts, new_comment):
+    if not validate_signature_from_claim(channel, signature, signing_ts, comment):
         logging.error("signature could not be validated")
         return
 
@@ -123,14 +123,10 @@ async def edit_comment(app, comment_id: str, new_comment: str, channel_id: str,
         comment_id=comment_id,
         signature=signature,
         signing_ts=signing_ts,
-        comment=new_comment
+        comment=comment
     ))
 
-    if await job.wait():
-        logging.info('comment successfully edited')
-        return db.get_comment_or_none(app['reader'], comment_id)
-    else:
-        logging.critical('comment could not be edited')
+    return await job.wait()
 
 
 async def abandon_comment(app, comment_id, channel_id, signature, signing_ts, **kwargs):
