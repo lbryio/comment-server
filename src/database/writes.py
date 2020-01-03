@@ -2,13 +2,16 @@ import logging
 import sqlite3
 from asyncio import coroutine
 
-
-import src.database.queries as db
-from server.validation import is_valid_channel, is_valid_base_comment, is_valid_credential_input, \
-    validate_signature_from_claim
-from server.validation import body_is_valid
+from src.server.validation import is_valid_channel
+from src.server.validation import is_valid_base_comment
+from src.server.validation import is_valid_credential_input
+from src.server.validation import validate_signature_from_claim
+from src.server.validation import body_is_valid
 from src.server.misc import get_claim_from_id
-from server.external import send_notifications, send_notification
+from src.server.external import send_notifications
+from src.server.external import send_notification
+import src.database.queries as db
+
 
 logger = logging.getLogger(__name__)
 
