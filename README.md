@@ -37,7 +37,7 @@ $ source venv/bin/activate
 
 As a super-user, copy the .service and .target files to the systemd directory: 
 ```bash 
-$ sudo comment-server/config/comment-server* /etc/systemd/system
+$ sudo cp config/comment-server* /etc/systemd/system
 ```
 Then `$ sudo systemctl daemon-reload` to refresh the systemd service files.
 
