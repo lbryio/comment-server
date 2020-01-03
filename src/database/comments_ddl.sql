@@ -9,13 +9,13 @@ CREATE TABLE IF NOT EXISTS COMMENT
 (
     CommentId   TEXT    NOT NULL,
     LbryClaimId TEXT    NOT NULL,
-    ChannelId   TEXT                DEFAULT NULL,
+    ChannelId   TEXT             DEFAULT NULL,
     Body        TEXT    NOT NULL,
-    ParentId    TEXT                DEFAULT NULL,
-    Signature   TEXT                DEFAULT NULL,
+    ParentId    TEXT             DEFAULT NULL,
+    Signature   TEXT             DEFAULT NULL,
     Timestamp   INTEGER NOT NULL,
-    SigningTs   TEXT                DEFAULT NULL,
-    IsHidden    BOOLEAN NOT NULL    DEFAULT FALSE,
+    SigningTs   TEXT             DEFAULT NULL,
+    IsHidden    BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT COMMENT_PRIMARY_KEY PRIMARY KEY (CommentId) ON CONFLICT IGNORE,
     CONSTRAINT COMMENT_SIGNATURE_SK UNIQUE (Signature) ON CONFLICT ABORT,
     CONSTRAINT COMMENT_CHANNEL_FK FOREIGN KEY (ChannelId) REFERENCES CHANNEL (ClaimId)
@@ -44,21 +44,21 @@ CREATE TABLE IF NOT EXISTS CHANNEL
 -- CREATE INDEX IF NOT EXISTS CHANNEL_COMMENT_INDEX ON COMMENT (ChannelId, CommentId);
 
 -- VIEWS
-CREATE VIEW IF NOT EXISTS COMMENTS_ON_CLAIMS AS SELECT
-        C.CommentId AS comment_id,
-        C.Body AS comment,
-        C.LbryClaimId AS claim_id,
-        C.Timestamp AS timestamp,
-        CHAN.Name AS channel_name,
-        CHAN.ClaimId AS channel_id,
-        ('lbry://' || CHAN.Name || '#' || CHAN.ClaimId) AS channel_url,
-        C.Signature AS signature,
-        C.SigningTs AS signing_ts,
-        C.ParentId AS parent_id,
-        C.IsHidden AS is_hidden
-    FROM COMMENT AS C
-             LEFT OUTER JOIN CHANNEL CHAN ON C.ChannelId = CHAN.ClaimId
-    ORDER BY C.Timestamp DESC;
+CREATE VIEW IF NOT EXISTS COMMENTS_ON_CLAIMS AS
+SELECT C.CommentId                                     AS comment_id,
+       C.Body                                          AS comment,
+       C.LbryClaimId                                   AS claim_id,
+       C.Timestamp                                     AS timestamp,
+       CHAN.Name                                       AS channel_name,
+       CHAN.ClaimId                                    AS channel_id,
+       ('lbry://' || CHAN.Name || '#' || CHAN.ClaimId) AS channel_url,
+       C.Signature                                     AS signature,
+       C.SigningTs                                     AS signing_ts,
+       C.ParentId                                      AS parent_id,
+       C.IsHidden                                      AS is_hidden
+FROM COMMENT AS C
+         LEFT OUTER JOIN CHANNEL CHAN ON C.ChannelId = CHAN.ClaimId
+ORDER BY C.Timestamp DESC;
 
 
 DROP VIEW IF EXISTS COMMENT_REPLIES;

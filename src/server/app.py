@@ -1,19 +1,16 @@
 # cython: language_level=3
+import asyncio
 import logging
 import pathlib
 import signal
 import time
-import queue
-
 
 import aiojobs
 import aiojobs.aiohttp
-import asyncio
-import aiohttp
 from aiohttp import web
 
-from src.database.queries import setup_database, backup_database
 from src.database.queries import obtain_connection, DatabaseWriter
+from src.database.queries import setup_database, backup_database
 from src.server.handles import api_endpoint, get_api_endpoint
 
 logger = logging.getLogger(__name__)

@@ -1,12 +1,14 @@
 import binascii
+import logging
 import hashlib
 import json
 import sqlite3
 import asyncio
-
 import aiohttp
 
-from src.server.misc import is_signature_valid, get_encoded_signature
+from server.validation import is_signature_valid, get_encoded_signature
+
+logger = logging.getLogger(__name__)
 
 
 async def request_lbrynet(url, method, **params):

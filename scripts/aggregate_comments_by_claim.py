@@ -56,6 +56,7 @@ async def main():
             i += 1
     return claims
 
+
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     claims = loop.run_until_complete(main())

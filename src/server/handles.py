@@ -1,19 +1,16 @@
+import asyncio
 import logging
 import time
 
-import asyncio
 from aiohttp import web
 from aiojobs.aiohttp import atomic
 
-from src.server.misc import clean_input_params, report_error
-from src.database.queries import get_claim_comments
-from src.database.queries import get_comments_by_id, get_comment_ids
-from src.database.queries import get_channel_id_from_comment_id
-from src.database.queries import get_claim_hidden_comments
-from src.server.misc import make_error
-from src.database.writes import abandon_comment_if_authorized, create_comment
-from src.database.writes import hide_comments_where_authorized
-
+import src.database.queries as db
+from src.database.writes import abandon_comment, create_comment
+from src.database.writes import hide_comments
+from src.database.writes import edit_comment
+from src.server.misc import clean_input_params
+from src.server.errors import make_error, report_error
 
 logger = logging.getLogger(__name__)
 
@@ -24,35 +21,36 @@ def ping(*args):
 
 
 def handle_get_channel_from_comment_id(app, kwargs: dict):
-    return get_channel_id_from_comment_id(app['reader'], **kwargs)
+    return db.get_channel_id_from_comment_id(app['reader'], **kwargs)
 
 
 def handle_get_comment_ids(app, kwargs):
-    return get_comment_ids(app['reader'], **kwargs)
+    return db.get_comment_ids(app['reader'], **kwargs)
 
 
 def handle_get_claim_comments(app, kwargs):
-    return get_claim_comments(app['reader'], **kwargs)
+    return db.get_claim_comments(app['reader'], **kwargs)
 
 
 def handle_get_comments_by_id(app, kwargs):
-    return get_comments_by_id(app['reader'], **kwargs)
+    return db.get_comments_by_id(app['reader'], **kwargs)
 
 
 def handle_get_claim_hidden_comments(app, kwargs):
-    return get_claim_hidden_comments(app['reader'], **kwargs)
-
-
-async def handle_create_comment(app, params):
-    return await create_comment(app, params)
+    return db.get_claim_hidden_comments(app['reader'], **kwargs)
 
 
 async def handle_abandon_comment(app, params):
-    return {'abandoned': await abandon_comment_if_authorized(app, **params)}
+    return {'abandoned': await abandon_comment(app, **params)}
 
 
 async def handle_hide_comments(app, params):
-    return {'hidden': await hide_comments_where_authorized(app, **params)}
+    return {'hidden': await hide_comments(app, **params)}
+
+
+async def handle_edit_comment(app, params):
+    if await edit_comment(app, **params):
+        return db.get_comment_or_none(app['reader'], params['comment_id'])
 
 
 METHODS = {
@@ -62,10 +60,11 @@ METHODS = {
     'get_comment_ids': handle_get_comment_ids,
     'get_comments_by_id': handle_get_comments_by_id,
     'get_channel_from_comment_id': handle_get_channel_from_comment_id,
-    'create_comment': handle_create_comment,
+    'create_comment': create_comment,
     'delete_comment': handle_abandon_comment,
     'abandon_comment': handle_abandon_comment,
-    'hide_comments': handle_hide_comments
+    'hide_comments': handle_hide_comments,
+    'edit_comment': handle_edit_comment
 }
 
 
