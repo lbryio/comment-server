@@ -1,6 +1,6 @@
 import logging
 
-from server.external import request_lbrynet
+from src.server.external import request_lbrynet
 
 logger = logging.getLogger(__name__)
 
