@@ -16,11 +16,12 @@ import src.database.queries as db
 logger = logging.getLogger(__name__)
 
 
-def create_comment_or_error(conn, comment, claim_id, channel_id=None, channel_name=None,
+def create_comment_or_error(conn, comment, claim_id=None, channel_id=None, channel_name=None,
                             signature=None, signing_ts=None, parent_id=None) -> dict:
-    if channel_id or channel_name or signature or signing_ts:
+    if channel_id and channel_name:
         insert_channel_or_error(conn, channel_name, channel_id)
-    comment_id = db.insert_comment(
+    fn = db.insert_comment if parent_id is None else db.insert_reply
+    comment_id = fn(
         conn=conn,
         comment=comment,
         claim_id=claim_id,

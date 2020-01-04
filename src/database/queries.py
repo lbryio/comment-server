@@ -109,30 +109,56 @@ def claim_has_hidden_comments(conn, claim_id):
         return bool(tuple(result.fetchone())[0])
 
 
-def insert_comment(conn: sqlite3.Connection, claim_id: str, comment: str, parent_id: str = None,
-                   channel_id: str = None, signature: str = None, signing_ts: str = None) -> str:
+def insert_comment(conn: sqlite3.Connection, claim_id: str, comment: str,
+                   channel_id: str = None, signature: str = None, signing_ts: str = None, **extra) -> str:
     timestamp = int(time.time())
     prehash = b':'.join((claim_id.encode(), comment.encode(), str(timestamp).encode(),))
     comment_id = nacl.hash.sha256(prehash).decode()
     with conn:
-        conn.execute(
+        curs = conn.execute(
             """
             INSERT INTO COMMENT(CommentId, LbryClaimId, ChannelId, Body, ParentId, 
                                     Timestamp, Signature, SigningTs, IsHidden) 
-            VALUES (:comment_id, :claim_id, :channel_id, :comment, :parent_id,
+            VALUES (:comment_id, :claim_id, :channel_id, :comment, NULL,
                     :timestamp, :signature, :signing_ts, 0) """,
             {
                 'comment_id': comment_id,
                 'claim_id': claim_id,
                 'channel_id': channel_id,
                 'comment': comment,
-                'parent_id': parent_id,
                 'timestamp': timestamp,
                 'signature': signature,
                 'signing_ts': signing_ts
             }
         )
-    logging.info('Inserted Comment into DB, `comment_id`: %s', comment_id)
+        logging.info('attempted to insert comment with comment_id [%s] | %d rows affected', comment_id, curs.rowcount)
+    return comment_id
+
+
+def insert_reply(conn: sqlite3.Connection, comment: str, parent_id: str,
+                 channel_id: str = None, signature: str = None,
+                 signing_ts: str = None, **extra) -> str:
+    timestamp = int(time.time())
+    prehash = b':'.join((parent_id.encode(), comment.encode(), str(timestamp).encode(),))
+    comment_id = nacl.hash.sha256(prehash).decode()
+    with conn:
+        curs = conn.execute(
+            """
+            INSERT INTO COMMENT 
+                (CommentId, LbryClaimId, ChannelId, Body, ParentId, Signature, Timestamp, SigningTs, IsHidden) 
+            SELECT :comment_id, LbryClaimId, :channel_id, :comment, :parent_id, :signature, :timestamp, :signing_ts, 0
+            FROM COMMENT WHERE CommentId = :parent_id
+            """, {
+                'comment_id': comment_id,
+                'parent_id': parent_id,
+                'timestamp': timestamp,
+                'comment': comment,
+                'channel_id': channel_id,
+                'signature': signature,
+                'signing_ts': signing_ts
+            }
+        )
+        logging.info('attempted to insert reply with comment_id [%s] | %d rows affected', comment_id, curs.rowcount)
     return comment_id
 
 
