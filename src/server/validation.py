@@ -52,8 +52,8 @@ def claim_id_is_valid(claim_id: str) -> bool:
 
 def is_valid_base_comment(comment: str, claim_id: str, parent_id: str = None, **kwargs) -> bool:
     return comment is not None and body_is_valid(comment) and \
-           claim_id is not None and claim_id_is_valid(claim_id) and \
-           (parent_id is None or comment_id_is_valid(parent_id))
+           ((claim_id is not None and claim_id_is_valid(claim_id)) or
+            (parent_id is not None and comment_id_is_valid(parent_id)))
 
 
 def is_valid_credential_input(channel_id: str = None, channel_name: str = None,
