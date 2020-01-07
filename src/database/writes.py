@@ -88,7 +88,10 @@ async def hide_comments(app, pieces: list) -> list:
     for p in pieces:
         claim_id = comment_cids[p['comment_id']]
         if claim_id not in claims:
-            claims[claim_id] = await get_claim_from_id(app, claim_id, no_totals=True)
+            claim = await get_claim_from_id(app, claim_id)
+            if claim:
+                claims[claim_id] = claim
+
         channel = claims[claim_id].get('signing_channel')
         if validate_signature_from_claim(channel, p['signature'], p['signing_ts'], p['comment_id']):
             comments_to_hide.append(p)
@@ -100,7 +103,6 @@ async def hide_comments(app, pieces: list) -> list:
             app, 'UPDATE', db.get_comments_by_id(app['reader'], comment_ids)
         )
     )
-
     await job.wait()
     return comment_ids
 

@@ -12,14 +12,8 @@ from src.database.schema import CREATE_TABLES_QUERY
 logger = logging.getLogger(__name__)
 
 SELECT_COMMENTS_ON_CLAIMS = """
-    SELECT comment, comment_id, channel_name, channel_id, channel_url,
-        timestamp, signature, signing_ts, parent_id, is_hidden
-    FROM COMMENTS_ON_CLAIMS 
-"""
-
-SELECT_COMMENTS_ON_CLAIMS_CLAIMID = """
-    SELECT comment, comment_id, claim_id, channel_name, channel_id, channel_url,
-        timestamp, signature, signing_ts, parent_id, is_hidden
+    SELECT comment, comment_id, claim_id, timestamp, is_hidden, parent_id,
+        channel_name, channel_id, channel_url, signature, signing_ts 
     FROM COMMENTS_ON_CLAIMS 
 """
 
@@ -164,7 +158,7 @@ def insert_reply(conn: sqlite3.Connection, comment: str, parent_id: str,
 
 def get_comment_or_none(conn: sqlite3.Connection, comment_id: str) -> dict:
     with conn:
-        curry = conn.execute(SELECT_COMMENTS_ON_CLAIMS_CLAIMID + "WHERE comment_id = ?", (comment_id,))
+        curry = conn.execute(SELECT_COMMENTS_ON_CLAIMS + "WHERE comment_id = ?", (comment_id,))
         thing = curry.fetchone()
         return clean(dict(thing)) if thing else None
 
@@ -199,7 +193,7 @@ def get_comments_by_id(conn, comment_ids: typing.Union[list, tuple]) -> typing.U
     placeholders = ', '.join('?' for _ in comment_ids)
     with conn:
         return [clean(dict(row)) for row in conn.execute(
-            SELECT_COMMENTS_ON_CLAIMS_CLAIMID + f'WHERE comment_id IN ({placeholders})',
+            SELECT_COMMENTS_ON_CLAIMS + f'WHERE comment_id IN ({placeholders})',
             tuple(comment_ids)
         )]
 
