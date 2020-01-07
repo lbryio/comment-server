@@ -8,7 +8,10 @@ ID_LIST = {'claim_id', 'parent_id', 'comment_id', 'channel_id'}
 
 
 async def get_claim_from_id(app, claim_id, **kwargs):
-    return (await request_lbrynet(app, 'claim_search', claim_id=claim_id, **kwargs))['items'][0]
+    try:
+        return (await request_lbrynet(app, 'claim_search', claim_id=claim_id, **kwargs))['items'][0]
+    except IndexError:
+        return
 
 
 def clean_input_params(kwargs: dict):
