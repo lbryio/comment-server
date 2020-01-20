@@ -29,16 +29,14 @@ def make_error(error, exc=None) -> dict:
         return body
 
 
-async def report_error(app, exc, msg=''):
+async def report_error(app, exc, body: dict):
     try:
         if 'slack_webhook' in app['config']:
-            if msg:
-                msg = f'"{msg}"'
-            body = {
-                "text": f"Got `{type(exc).__name__}`: ```\n{str(exc)}```\n{msg}"
+            message = {
+                "text": f"Got `{type(exc).__name__}`: `\n{str(exc)}`\n```{body}```"
             }
             async with aiohttp.ClientSession() as sesh:
-                async with sesh.post(app['config']['slack_webhook'], json=body) as resp:
+                async with sesh.post(app['config']['slack_webhook'], json=message) as resp:
                     await resp.wait_for_close()
 
     except Exception:
