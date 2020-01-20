@@ -88,7 +88,7 @@ async def process_json(app, body: dict) -> dict:
                 response['error'] = make_error('INVALID_PARAMS', err)
             else:
                 response['error'] = make_error('INTERNAL', err)
-                await app['webhooks'].spawn(report_error(app, err))
+                await app['webhooks'].spawn(report_error(app, err, body))
 
         finally:
             end = time.time()
