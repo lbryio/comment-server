@@ -1,4 +1,4 @@
-import unittest
+import sqlite3
 
 from random import randint
 import faker
@@ -53,21 +53,13 @@ class TestDatabaseOperations(DatabaseTestCase):
         self.assertEqual(reply['parent_id'], comment['comment_id'])
 
     def test02AnonymousComments(self):
-        comment = create_comment_or_error(
+        self.assertRaises(
+            sqlite3.IntegrityError,
+            create_comment_or_error,
             conn=self.conn,
             claim_id=self.claimId,
             comment='This is an ANONYMOUS comment'
         )
-        self.assertIsNotNone(comment)
-        previous_id = comment['comment_id']
-        reply = create_comment_or_error(
-            conn=self.conn,
-            claim_id=self.claimId,
-            comment='This is an unnamed response',
-            parent_id=previous_id
-        )
-        self.assertIsNotNone(reply)
-        self.assertEqual(reply['parent_id'], comment['comment_id'])
 
     def test03SignedComments(self):
         comment = create_comment_or_error(
