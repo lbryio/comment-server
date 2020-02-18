@@ -11,7 +11,6 @@ from faker.providers import misc
 
 from src.settings import config
 from src.server import app
-from src.server.validation import is_valid_channel
 from src.server.validation import is_valid_base_comment
 
 from test.testcase import AsyncioTestCase
@@ -97,22 +96,6 @@ class ServerTest(AsyncioTestCase):
     async def post_comment(self, **params):
         return await jsonrpc_post(self.url, 'create_comment', **params)
 
-    @staticmethod
-    def is_valid_message(comment=None, claim_id=None, parent_id=None,
-                         channel_name=None, channel_id=None, signature=None, signing_ts=None):
-        try:
-            assert is_valid_base_comment(comment, claim_id, parent_id)
-
-            if channel_name or channel_id or signature or signing_ts:
-                assert channel_id and channel_name and signature and signing_ts
-                assert is_valid_channel(channel_id, channel_name)
-                assert len(signature) == 128
-                assert signing_ts.isalnum()
-
-        except Exception:
-            return False
-        return True
-
     async def test01CreateCommentNoReply(self):
         anonymous_test = create_test_comments(
             ('claim_id', 'channel_id', 'channel_name', 'comment'),
@@ -122,13 +105,13 @@ class ServerTest(AsyncioTestCase):
             claim_id=None
         )
         for test in anonymous_test:
-            with self.subTest(test=test):
+            with self.subTest(test='null fields: ' + ', '.join(k for k, v in test.items() if not v)):
                 message = await self.post_comment(**test)
                 self.assertTrue('result' in message or 'error' in message)
                 if 'error' in message:
-                    self.assertFalse(self.is_valid_message(**test))
+                    self.assertFalse(is_valid_base_comment(**test))
                 else:
-                    self.assertTrue(self.is_valid_message(**test))
+                    self.assertTrue(is_valid_base_comment(**test))
 
     async def test02CreateNamedCommentsNoReply(self):
         named_test = create_test_comments(
@@ -144,9 +127,9 @@ class ServerTest(AsyncioTestCase):
                 message = await self.post_comment(**test)
                 self.assertTrue('result' in message or 'error' in message)
                 if 'error' in message:
-                    self.assertFalse(self.is_valid_message(**test))
+                    self.assertFalse(is_valid_base_comment(**test))
                 else:
-                    self.assertTrue(self.is_valid_message(**test))
+                    self.assertTrue(is_valid_base_comment(**test))
 
     async def test03CreateAllTestComments(self):
         test_all = create_test_comments(replace.keys(), **{
@@ -157,9 +140,9 @@ class ServerTest(AsyncioTestCase):
                 message = await self.post_comment(**test)
                 self.assertTrue('result' in message or 'error' in message)
                 if 'error' in message:
-                    self.assertFalse(self.is_valid_message(**test))
+                    self.assertFalse(is_valid_base_comment(**test))
                 else:
-                    self.assertTrue(self.is_valid_message(**test))
+                    self.assertTrue(is_valid_base_comment(**test))
 
     async def test04CreateAllReplies(self):
         claim_id = '1d8a5cc39ca02e55782d619e67131c0a20843be8'
@@ -189,9 +172,37 @@ class ServerTest(AsyncioTestCase):
                     message = await self.post_comment(**test)
                     self.assertTrue('result' in message or 'error' in message)
                     if 'error' in message:
-                        self.assertFalse(self.is_valid_message(**test))
+                        self.assertFalse(is_valid_base_comment(**test))
                     else:
-                        self.assertTrue(self.is_valid_message(**test))
+                        self.assertTrue(is_valid_base_comment(**test))
+
+    async def testSlackWebhook(self):
+        claim_id = '1d8a5cc39ca02e55782d619e67131c0a20843be8'
+        channel_name = '@name'
+        channel_id = fake.sha1()
+        signature = '{}'*64
+        signing_ts = '1234'
+
+        base = await self.post_comment(
+            channel_name=channel_name,
+            channel_id=channel_id,
+            comment='duplicate',
+            claim_id=claim_id,
+            signing_ts=signing_ts,
+            signature=signature
+        )
+
+        comment_id = base['result']['comment_id']
+
+        with self.subTest(test=comment_id):
+            await self.post_comment(
+                channel_name=channel_name,
+                channel_id=channel_id,
+                comment='duplicate',
+                claim_id=claim_id,
+                signing_ts=signing_ts,
+                signature=signature
+            )
 
 
 class ListCommentsTest(AsyncioTestCase):
