@@ -50,7 +50,8 @@ def claim_id_is_valid(claim_id: str) -> bool:
     return re.fullmatch('([a-z0-9]{40}|[A-Z0-9]{40})', claim_id) is not None
 
 
-def is_valid_base_comment(comment: str, claim_id: str, parent_id: str = None, **kwargs) -> bool:
+# default to None so params can be treated as kwargs; param count becomes more manageable
+def is_valid_base_comment(comment: str = None, claim_id: str = None, parent_id: str = None, **kwargs) -> bool:
     return comment and body_is_valid(comment) and \
            ((claim_id and claim_id_is_valid(claim_id)) or  # parentid is used in place of claimid in replies
             (parent_id and comment_id_is_valid(parent_id))) \
@@ -58,18 +59,19 @@ def is_valid_base_comment(comment: str, claim_id: str, parent_id: str = None, **
 
 
 def is_valid_credential_input(channel_id: str = None, channel_name: str = None,
-                              signature: str = None, signing_ts: str = None, **kwargs) -> bool:
+                              signature: str = None, signing_ts: str = None) -> bool:
     try:
-        assert channel_id and channel_name and signature and signing_ts
+        assert None not in (channel_id, channel_name, signature, signing_ts)
         assert is_valid_channel(channel_id, channel_name)
         assert len(signature) == 128
         assert signing_ts.isalnum()
+
+        return True
+
     except Exception as e:
         logger.exception(f'Failed to validate channel: lbry://{channel_name}#{channel_id}, '
                          f'signature: {signature} signing_ts: {signing_ts}')
         return False
-    finally:
-        return True
 
 
 def validate_signature_from_claim(claim: dict, signature: typing.Union[str, bytes],
