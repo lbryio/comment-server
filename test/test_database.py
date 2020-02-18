@@ -134,61 +134,7 @@ class TestDatabaseOperations(DatabaseTestCase):
             comment='this username is too short'
         )
 
-    def test05InsertRandomComments(self):
-        # TODO: Fix this test into something practical
-        self.skipTest('This is a bad test')
-        top_comments, claim_ids = generate_top_comments_random()
-        total = 0
-        success = 0
-        for _, comments in top_comments.items():
-            for i, comment in enumerate(comments):
-                with self.subTest(comment=comment):
-                    result = create_comment_or_error(self.conn, **comment)
-                    if result:
-                        success += 1
-                    comments[i] = result
-                    del comment
-                total += len(comments)
-        self.assertLessEqual(success, total)
-        self.assertGreater(success, 0)
-        success = 0
-        for reply in generate_replies_random(top_comments):
-            reply_id = create_comment_or_error(self.conn, **reply)
-            if reply_id:
-                success += 1
-        self.assertGreater(success, 0)
-        self.assertLess(success, total)
-        del top_comments
-        del claim_ids
-
-    def test06GenerateAndListComments(self):
-        # TODO: Make this test not suck
-        self.skipTest('this is a stupid test')
-        top_comments, claim_ids = generate_top_comments()
-        total, success = 0, 0
-        for _, comments in top_comments.items():
-            for i, comment in enumerate(comments):
-                result = create_comment_or_error(self.conn, **comment)
-                if result:
-                    success += 1
-                comments[i] = result
-                del comment
-            total += len(comments)
-        self.assertEqual(total, success)
-        self.assertGreater(total, 0)
-        for reply in generate_replies(top_comments):
-            create_comment_or_error(self.conn, **reply)
-        for claim_id in claim_ids:
-            comments_ids = get_comment_ids(self.conn, claim_id)
-            with self.subTest(comments_ids=comments_ids):
-                self.assertIs(type(comments_ids), list)
-                self.assertGreaterEqual(len(comments_ids), 0)
-                self.assertLessEqual(len(comments_ids), 50)
-                replies = get_comments_by_id(self.conn, comments_ids)
-                self.assertLessEqual(len(replies), 50)
-                self.assertEqual(len(replies), len(comments_ids))
-
-    def test07HideComments(self):
+    def test05HideComments(self):
         comm = create_comment_or_error(self.conn, 'Comment #1', self.claimId, '1'*40, '@Doge123', 'a'*128, '123')
         comment = get_comments_by_id(self.conn, [comm['comment_id']]).pop()
         self.assertFalse(comment['is_hidden'])
@@ -201,7 +147,7 @@ class TestDatabaseOperations(DatabaseTestCase):
         comment = get_comments_by_id(self.conn, [comm['comment_id']]).pop()
         self.assertTrue(comment['is_hidden'])
 
-    def test08DeleteComments(self):
+    def test06DeleteComments(self):
         comm = create_comment_or_error(self.conn, 'Comment #1', self.claimId, '1'*40, '@Doge123', 'a'*128, '123')
         comments = get_claim_comments(self.conn, self.claimId)
         match = list(filter(lambda x: comm['comment_id'] == x['comment_id'], comments['items']))
