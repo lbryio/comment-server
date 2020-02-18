@@ -51,23 +51,25 @@ def claim_id_is_valid(claim_id: str) -> bool:
 
 
 def is_valid_base_comment(comment: str, claim_id: str, parent_id: str = None, **kwargs) -> bool:
-    return comment is not None and body_is_valid(comment) and \
-           ((claim_id is not None and claim_id_is_valid(claim_id)) or
-            (parent_id is not None and comment_id_is_valid(parent_id)))
+    return comment and body_is_valid(comment) and \
+           ((claim_id and claim_id_is_valid(claim_id)) or  # parentid is used in place of claimid in replies
+            (parent_id and comment_id_is_valid(parent_id))) \
+           and is_valid_credential_input(**kwargs)
 
 
 def is_valid_credential_input(channel_id: str = None, channel_name: str = None,
                               signature: str = None, signing_ts: str = None, **kwargs) -> bool:
-    if channel_id or channel_name or signature or signing_ts:
-        try:
-            assert channel_id and channel_name and signature and signing_ts
-            assert is_valid_channel(channel_id, channel_name)
-            assert len(signature) == 128
-            assert signing_ts.isalnum()
-
-        except Exception:
-            return False
-    return True
+    try:
+        assert channel_id and channel_name and signature and signing_ts
+        assert is_valid_channel(channel_id, channel_name)
+        assert len(signature) == 128
+        assert signing_ts.isalnum()
+    except Exception as e:
+        logger.exception(f'Failed to validate channel: lbry://{channel_name}#{channel_id}, '
+                         f'signature: {signature} signing_ts: {signing_ts}')
+        return False
+    finally:
+        return True
 
 
 def validate_signature_from_claim(claim: dict, signature: typing.Union[str, bytes],
