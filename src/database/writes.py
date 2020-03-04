@@ -18,8 +18,7 @@ logger = logging.getLogger(__name__)
 
 def create_comment_or_error(conn, comment, claim_id=None, channel_id=None, channel_name=None,
                             signature=None, signing_ts=None, parent_id=None) -> dict:
-    if channel_id and channel_name:
-        insert_channel_or_error(conn, channel_name, channel_id)
+    insert_channel_or_error(conn, channel_name, channel_id)
     fn = db.insert_comment if parent_id is None else db.insert_reply
     comment_id = fn(
         conn=conn,
@@ -65,7 +64,7 @@ async def _abandon_comment(app, comment_id):  # DELETE
 
 
 async def create_comment(app, params):
-    if is_valid_base_comment(**params) and is_valid_credential_input(**params):
+    if is_valid_base_comment(**params):
         job = await app['comment_scheduler'].spawn(_create_comment(app, params))
         comment = await job.wait()
         if comment:
