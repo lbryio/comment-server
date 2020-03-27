@@ -159,7 +159,58 @@ def get_channel_from_comment_id(comment_id: str) -> dict:
         select_fields=['channel_name', 'channel_id', 'channel_url'],
         page_size=1
     )
+    # todo: make the return type here consistent
     return results['items'].pop()
+
+
+def create_comment_id(comment: str, channel_id: str, timestamp: int):
+    # We convert the timestamp from seconds into minutes
+    # to prevent spammers from commenting the same BS everywhere.
+    nearest_minute = str(math.floor(timestamp))
+
+    # don't use claim_id for the comment_id anymore so comments
+    # are not unique to just one claim
+    prehash = b':'.join([
+        comment.encode(),
+        channel_id.encode(),
+        nearest_minute.encode()
+    ])
+    return nacl.hash.sha256(prehash).decode()
+
+
+def create_comment(comment: str = None, claim_id: str = None,
+                   parent_id: str = None, channel_id: str = None,
+                   channel_name: str = None, signature: str = None,
+                   signing_ts: str = None) -> dict:
+    if not is_valid_base_comment(
+            comment=comment,
+            claim_id=claim_id,
+            parent_id=parent_id,
+            channel_id=channel_id,
+            channel_name=channel_name,
+            signature=signature,
+            signing_ts=signing_ts
+    ):
+        raise ValueError('Invalid Parameters given for comment')
+
+    channel, _ = Channel.get_or_create(name=channel_name, claim_id=channel_id)
+    if parent_id:
+        parent: Comment = Comment.get_by_id(parent_id)
+        claim_id = parent.claim_id
+
+    timestamp = int(time.time())
+    comment_id = create_comment_id(comment, channel_id, timestamp)
+    new_comment = Comment.create(
+        claim_id=claim_id,
+        comment_id=comment_id,
+        comment=comment,
+        parent=parent_id,
+        channel=channel,
+        signature=signature,
+        signing_ts=signing_ts,
+        timestamp=timestamp
+    )
+    return get_comment(new_comment.comment_id)
 
 
 if __name__ == '__main__':
