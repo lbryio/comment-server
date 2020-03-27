@@ -9,7 +9,7 @@ import src.database.queries as db
 from src.database.writes import abandon_comment, create_comment
 from src.database.writes import hide_comments
 from src.database.writes import edit_comment
-from src.server.misc import clean_input_params
+from src.misc import clean_input_params
 from src.server.errors import make_error, report_error
 
 logger = logging.getLogger(__name__)

@@ -1,14 +1,15 @@
 import json
+import time
+
 import logging
-
 import math
-import timeit
-
 import typing
 
-from peewee import ModelSelect
-from playhouse.shortcuts import model_to_dict
 from peewee import *
+import nacl.hash
+
+from src.server.validation import is_valid_base_comment
+from src.misc import clean
 
 
 def get_database_connection():
@@ -123,10 +124,6 @@ def comment_list(claim_id: str = None, parent_id: str = None,
         'has_hidden_comments': exclude_mode is not None and exclude_mode == 'hidden',
     }
     return data
-
-
-def clean(thing: dict) -> dict:
-    return {k: v for k, v in thing.items() if v is not None}
 
 
 def get_comment(comment_id: str) -> dict:

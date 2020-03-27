@@ -20,3 +20,7 @@ def clean_input_params(kwargs: dict):
             kwargs[k] = v.strip()
             if k in ID_LIST:
                 kwargs[k] = v.lower()
+
+
+def clean(thing: dict) -> dict:
+    return {k: v for k, v in thing.items() if v is not None}
