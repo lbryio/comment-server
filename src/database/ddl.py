@@ -130,25 +130,9 @@ def clean(thing: dict) -> dict:
 
 
 def get_comment(comment_id: str) -> dict:
-    try:
-        comment: Comment = Comment.get_by_id(comment_id)
-    except DoesNotExist as e:
-        raise ValueError from e
-    else:
-        as_dict = model_to_dict(comment)
-        if comment.channel:
-            as_dict.update({
-                'channel_id': comment.channel_id,
-                'channel_name': comment.channel.name,
-                'signature': comment.signature,
-                'signing_ts': comment.signing_ts,
-                'channel_url': comment.channel.channel_url
-            })
-        if comment.parent:
-            as_dict.update({
-                'parent_id': comment.parent_id
-            })
-        return clean(as_dict)
+    return (comment_list(expressions=(Comment.comment_id == comment_id), page_size=1)
+            .get('items')
+            .pop())
 
 
 def get_comment_ids(claim_id: str = None, parent_id: str = None,
@@ -173,19 +157,12 @@ def get_comments_by_id(comment_ids: typing.Union[list, tuple]) -> dict:
 
 
 def get_channel_from_comment_id(comment_id: str) -> dict:
-    try:
-        comment = Comment.get_by_id(comment_id)
-    except DoesNotExist as e:
-        raise ValueError from e
-    else:
-        channel = comment.channel
-        if not channel:
-            raise ValueError('The provided comment does not belong to a channel.')
-        return {
-            'channel_name': channel.name,
-            'channel_id': channel.claim_id,
-            'channel_url': 'lbry://' + channel.name + '#' + channel.claim_id
-        }
+    results = comment_list(
+        expressions=(Comment.comment_id == comment_id),
+        select_fields=['channel_name', 'channel_id', 'channel_url'],
+        page_size=1
+    )
+    return results['items'].pop()
 
 
 if __name__ == '__main__':
