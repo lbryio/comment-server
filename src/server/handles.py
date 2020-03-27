@@ -55,16 +55,16 @@ async def handle_edit_comment(app, params):
 
 METHODS = {
     'ping': ping,
-    'get_claim_comments': handle_get_claim_comments,
-    'get_claim_hidden_comments': handle_get_claim_hidden_comments,
+    'get_claim_comments': handle_get_claim_comments,    # this gets used
+    'get_claim_hidden_comments': handle_get_claim_hidden_comments,  # this gets used
     'get_comment_ids': handle_get_comment_ids,
-    'get_comments_by_id': handle_get_comments_by_id,
-    'get_channel_from_comment_id': handle_get_channel_from_comment_id,
-    'create_comment': create_comment,
+    'get_comments_by_id': handle_get_comments_by_id,    # this gets used
+    'get_channel_from_comment_id': handle_get_channel_from_comment_id,  # this gets used
+    'create_comment': create_comment,   # this gets used
     'delete_comment': handle_abandon_comment,
-    'abandon_comment': handle_abandon_comment,
-    'hide_comments': handle_hide_comments,
-    'edit_comment': handle_edit_comment
+    'abandon_comment': handle_abandon_comment,  # this gets used
+    'hide_comments': handle_hide_comments,  # this gets used
+    'edit_comment': handle_edit_comment     # this gets used
 }
 
 

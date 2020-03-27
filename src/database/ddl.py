@@ -64,27 +64,34 @@ class Comment(BaseModel):
         )
 
 
-COMMENT_FIELDS = [
-    Comment.comment,
-    Comment.comment_id,
-    Comment.claim_id,
-    Comment.timestamp,
-    Comment.signature,
-    Comment.signing_ts,
-    Comment.is_hidden,
-    Comment.parent.alias('parent_id'),
-]
-
-CHANNEL_FIELDS = [
-    Channel.claim_id.alias('channel_id'),
-    Channel.name.alias('channel_name')
-]
+FIELDS = {
+    'comment': Comment.comment,
+    'comment_id': Comment.comment_id,
+    'claim_id': Comment.claim_id,
+    'timestamp': Comment.timestamp,
+    'signature': Comment.signature,
+    'signing_ts': Comment.signing_ts,
+    'is_hidden': Comment.is_hidden,
+    'parent_id': Comment.parent.alias('parent_id'),
+    'channel_id': Channel.claim_id.alias('channel_id'),
+    'channel_name': Channel.name.alias('channel_name'),
+    'channel_url': ('lbry://' + Channel.name + '#' + Channel.claim_id).alias('channel_url')
+}
 
 
-def get_comment_list(claim_id: str = None, parent_id: str = None,
-                     top_level: bool = False, exclude_mode: str = None,
-                     page: int = 1, page_size: int = 50, expressions=None) -> dict:
-    query = Comment.select(*COMMENT_FIELDS, *CHANNEL_FIELDS)
+def comment_list(claim_id: str = None, parent_id: str = None,
+                 top_level: bool = False, exclude_mode: str = None,
+                 page: int = 1, page_size: int = 50, expressions=None,
+                 select_fields: list = None, exclude_fields: list = None) -> dict:
+    fields = FIELDS.keys()
+    if exclude_fields:
+        fields -= set(exclude_fields)
+    if select_fields:
+        fields &= set(select_fields)
+    attributes = [FIELDS[field] for field in fields]
+    query = Comment.select(*attributes)
+
+    # todo: allow this process to be more automated, so it can just be an expression
     if claim_id:
         query = query.where(Comment.claim_id == claim_id)
         if top_level:
@@ -96,10 +103,13 @@ def get_comment_list(claim_id: str = None, parent_id: str = None,
     if exclude_mode:
         show_hidden = exclude_mode.lower() == 'hidden'
         query = query.where((Comment.is_hidden == show_hidden))
+
+    if expressions:
+        query = query.where(expressions)
+
     total = query.count()
     query = (query
              .join(Channel, JOIN.LEFT_OUTER)
-             .where(expressions)
              .order_by(Comment.timestamp.desc())
              .paginate(page, page_size))
     items = [clean(item) for item in query.dicts()]
@@ -132,7 +142,7 @@ def get_comment(comment_id: str) -> dict:
                 'channel_name': comment.channel.name,
                 'signature': comment.signature,
                 'signing_ts': comment.signing_ts,
-                'channel_url': f'lbry://{comment.channel.name}#{comment.channel_id}'
+                'channel_url': comment.channel.channel_url
             })
         if comment.parent:
             as_dict.update({
@@ -141,19 +151,55 @@ def get_comment(comment_id: str) -> dict:
         return clean(as_dict)
 
 
+def get_comment_ids(claim_id: str = None, parent_id: str = None,
+                    page: int = 1, page_size: int = 50, flattened=False) -> dict:
+    results = comment_list(
+        claim_id, parent_id,
+        top_level=(parent_id is None),
+        page=page, page_size=page_size,
+        select_fields=['comment_id', 'parent_id']
+    )
+    if flattened:
+        results.update({
+            'items': [item['comment_id'] for item in results['items']],
+            'replies': [(item['comment_id'], item.get('parent_id')) for item in results['items']]
+        })
+    return results
+
+
+def get_comments_by_id(comment_ids: typing.Union[list, tuple]) -> dict:
+    expression = Comment.comment_id.in_(comment_ids)
+    return comment_list(expressions=expression, page_size=len(comment_ids))
+
+
+def get_channel_from_comment_id(comment_id: str) -> dict:
+    try:
+        comment = Comment.get_by_id(comment_id)
+    except DoesNotExist as e:
+        raise ValueError from e
+    else:
+        channel = comment.channel
+        if not channel:
+            raise ValueError('The provided comment does not belong to a channel.')
+        return {
+            'channel_name': channel.name,
+            'channel_id': channel.claim_id,
+            'channel_url': 'lbry://' + channel.name + '#' + channel.claim_id
+        }
+
+
 if __name__ == '__main__':
     logger = logging.getLogger('peewee')
     logger.addHandler(logging.StreamHandler())
     logger.setLevel(logging.DEBUG)
 
-    comment_list = get_comment_list(
-        page_size=1,
-        expressions=(Comment.channel.is_null())
+    comments = comment_list(
+        page_size=20,
+        expressions=((Comment.timestamp < 1583272089) &
+                     (Comment.claim_id ** '420%'))
     )
 
-    comment = comment_list['items'].pop()
-    print(json.dumps(comment, indent=4))
-    other_comment = get_comment(comment['comment_id'])
+    ids = get_comment_ids('4207d2378bf4340e68c9d88faf7ee24ea1a1f95a')
 
-    print(json.dumps(other_comment, indent=4))
-    print(comment == other_comment)
+    print(json.dumps(comments, indent=4))
+    print(json.dumps(ids, indent=4))

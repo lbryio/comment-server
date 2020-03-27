@@ -35,6 +35,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
                        page: int = 1, page_size: int = 50, top_level=False):
     with conn:
         if top_level:
+            # doesn't include any
             results = [clean(dict(row)) for row in conn.execute(
                 SELECT_COMMENTS_ON_CLAIMS + " WHERE claim_id = ? AND parent_id IS NULL LIMIT ? OFFSET ?",
                 (claim_id, page_size, page_size * (page - 1))
@@ -44,6 +45,7 @@ def get_claim_comments(conn: sqlite3.Connection, claim_id: str, parent_id: str =
                 (claim_id,)
             )
         elif parent_id is None:
+            # include all, no specific parent comment
             results = [clean(dict(row)) for row in conn.execute(
                 SELECT_COMMENTS_ON_CLAIMS + "WHERE claim_id = ? LIMIT ? OFFSET ? ",
                 (claim_id, page_size, page_size * (page - 1))
