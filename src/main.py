@@ -1,13 +1,20 @@
 import argparse
+import json
+import yaml
 import logging
 import logging.config
+import os
 import sys
 
 from src.server.app import run_app
-from src.settings import config
+from src.definitions import LOGGING_DIR, CONFIG_FILE, DATABASE_DIR
 
 
-def config_logging_from_settings(conf):
+def setup_logging_from_config(conf: dict):
+    # set the logging directory here from the settings file
+    if not os.path.exists(LOGGING_DIR):
+        os.mkdir(LOGGING_DIR)
+
     _config = {
         "version": 1,
         "disable_existing_loggers": False,
@@ -32,7 +39,7 @@ def config_logging_from_settings(conf):
                 "level": "DEBUG",
                 "formatter": "standard",
                 "class": "logging.handlers.RotatingFileHandler",
-                "filename": conf['path']['debug_log'],
+                "filename": os.path.join(LOGGING_DIR, 'debug.log'),
                 "maxBytes": 10485760,
                 "backupCount": 5
             },
@@ -40,7 +47,7 @@ def config_logging_from_settings(conf):
                 "level": "ERROR",
                 "formatter": "standard",
                 "class": "logging.handlers.RotatingFileHandler",
-                "filename": conf['path']['error_log'],
+                "filename": os.path.join(LOGGING_DIR, 'error.log'),
                 "maxBytes": 10485760,
                 "backupCount": 5
             },
@@ -48,7 +55,7 @@ def config_logging_from_settings(conf):
                 "level": "NOTSET",
                 "formatter": "aiohttp",
                 "class": "logging.handlers.RotatingFileHandler",
-                "filename": conf['path']['server_log'],
+                "filename": os.path.join(LOGGING_DIR, 'server.log'),
                 "maxBytes": 10485760,
                 "backupCount": 5
             }
@@ -70,15 +77,36 @@ def config_logging_from_settings(conf):
     logging.config.dictConfig(_config)
 
 
+def get_config(filepath):
+    with open(filepath, 'r') as cfile:
+        config = yaml.load(cfile, Loader=yaml.FullLoader)
+    return config
+
+
+def setup_db_from_config(config: dict):
+    if 'sqlite' in config['database']:
+        if not os.path.exists(DATABASE_DIR):
+            os.mkdir(DATABASE_DIR)
+
+        config['db_path'] = os.path.join(
+            DATABASE_DIR, config['database']['sqlite']
+        )
+
+
 def main(argv=None):
     argv = argv or sys.argv[1:]
     parser = argparse.ArgumentParser(description='LBRY Comment Server')
     parser.add_argument('--port', type=int)
+    parser.add_argument('--config', type=str)
     args = parser.parse_args(argv)
-    config_logging_from_settings(config)
+
+    config = get_config(CONFIG_FILE) if not args.config else args.config
+    setup_logging_from_config(config)
+    setup_db_from_config(config)
+
     if args.port:
         config['port'] = args.port
-    config_logging_from_settings(config)
+
     run_app(config)
 
 

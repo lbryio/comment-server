@@ -75,12 +75,9 @@ class CommentDaemon:
         self.config = app['config']
 
         # configure the db file
-        if db_file:
-            app['db_path'] = db_file
-            app['backup'] = backup
-        else:
-            app['db_path'] = config['path']['database']
-            app['backup'] = backup or (app['db_path'] + '.backup')
+        app['db_path'] = db_file or config.get('db_path')
+        if app['db_path']:
+            app['backup'] = backup or '.'.join((app['db_path'], 'backup'))
 
         # configure the order of tasks to run during app lifetime
         app.on_startup.append(setup_db_schema)

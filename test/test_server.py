@@ -9,11 +9,14 @@ from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
 
-from src.settings import config
+from src.main import get_config, CONFIG_FILE
 from src.server import app
 from src.server.validation import is_valid_base_comment
 
 from test.testcase import AsyncioTestCase
+
+
+config = get_config(CONFIG_FILE)
 
 
 if 'slack_webhook' in config:
