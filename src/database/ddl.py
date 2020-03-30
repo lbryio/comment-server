@@ -18,12 +18,15 @@ def get_database_connection():
     return db
 
 
+
+database_proxy = DatabaseProxy()
 database = get_database_connection()
+database_proxy.initialize(database)
 
 
 class BaseModel(Model):
     class Meta:
-        database = database
+        database = database_proxy
 
 
 class Channel(BaseModel):
