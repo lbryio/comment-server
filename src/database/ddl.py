@@ -203,17 +203,53 @@ def create_comment(comment: str = None, claim_id: str = None,
 
     timestamp = int(time.time())
     comment_id = create_comment_id(comment, channel_id, timestamp)
-    new_comment = Comment.create(
-        claim_id=claim_id,
-        comment_id=comment_id,
-        comment=comment,
-        parent=parent_id,
-        channel=channel,
-        signature=signature,
-        signing_ts=signing_ts,
-        timestamp=timestamp
-    )
-    return get_comment(new_comment.comment_id)
+    with database_proxy.atomic():
+        new_comment = Comment.create(
+            claim_id=claim_id,
+            comment_id=comment_id,
+            comment=comment,
+            parent=parent_id,
+            channel=channel,
+            signature=signature,
+            signing_ts=signing_ts,
+            timestamp=timestamp
+        )
+        return get_comment(new_comment.comment_id)
+
+
+def delete_comment(comment_id: str) -> bool:
+    try:
+        comment: Comment = Comment.get_by_id(comment_id)
+    except DoesNotExist as e:
+        raise ValueError from e
+    else:
+        with database_proxy.atomic():
+            return 0 < comment.delete_instance(True, delete_nullable=True)
+
+
+def edit_comment(comment_id: str, new_comment: str, new_sig: str, new_ts: str) -> bool:
+    try:
+        comment: Comment = Comment.get_by_id(comment_id)
+    except DoesNotExist as e:
+        raise ValueError from e
+    else:
+        with database_proxy.atomic():
+            comment.comment = new_comment
+            comment.signature = new_sig
+            comment.signing_ts = new_ts
+
+            # todo: add a 'last-modified' timestamp
+            comment.timestamp = int(time.time())
+            return comment.save() > 0
+
+
+def set_hidden_flag(comment_ids: typing.List[str], hidden=True) -> bool:
+    # sets `is_hidden` flag for all `comment_ids` to the `hidden` param
+    with database_proxy.atomic():
+        update = (Comment
+                  .update(is_hidden=hidden)
+                  .where(Comment.comment_id.in_(comment_ids)))
+        return update.execute() > 0
 
 
 if __name__ == '__main__':
