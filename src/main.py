@@ -79,7 +79,7 @@ def setup_logging_from_config(conf: dict):
 
 def get_config(filepath):
     with open(filepath, 'r') as cfile:
-        config = yaml.load(cfile, Loader=yaml.FullLoader)
+        config = yaml.load(cfile, Loader=yaml.Loader)
     return config
 
 
