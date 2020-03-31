@@ -10,7 +10,7 @@ import aiojobs.aiohttp
 from aiohttp import web
 
 from src.database.queries import obtain_connection, DatabaseWriter
-from src.database.queries import setup_database, backup_database
+from src.database.queries import setup_database
 from src.server.handles import api_endpoint, get_api_endpoint
 
 logger = logging.getLogger(__name__)
@@ -24,21 +24,9 @@ async def setup_db_schema(app):
         logger.info(f'Database already exists in {app["db_path"]}, skipping setup')
 
 
-async def database_backup_routine(app):
-    try:
-        while True:
-            await asyncio.sleep(app['config']['backup_int'])
-            with app['reader'] as conn:
-                logger.debug('backing up database')
-                backup_database(conn, app['backup'])
-    except asyncio.CancelledError:
-        pass
-
-
 async def start_background_tasks(app):
     # Reading the DB
     app['reader'] = obtain_connection(app['db_path'], True)
-    app['waitful_backup'] = asyncio.create_task(database_backup_routine(app))
 
     # Scheduler to prevent multiple threads from writing to DB simulataneously
     app['comment_scheduler'] = await aiojobs.create_scheduler(limit=1, pending_limit=0)
@@ -50,9 +38,6 @@ async def start_background_tasks(app):
 
 
 async def close_database_connections(app):
-    logger.info('Ending background backup loop')
-    app['waitful_backup'].cancel()
-    await app['waitful_backup']
     app['reader'].close()
     app['writer'].close()
     app['db_writer'].cleanup()
@@ -67,7 +52,7 @@ async def close_schedulers(app):
 
 
 class CommentDaemon:
-    def __init__(self, config, db_file=None, backup=None, **kwargs):
+    def __init__(self, config, db_file=None, **kwargs):
         app = web.Application()
 
         # configure the config
@@ -76,8 +61,6 @@ class CommentDaemon:
 
         # configure the db file
         app['db_path'] = db_file or config.get('db_path')
-        if app['db_path']:
-            app['backup'] = backup or '.'.join((app['db_path'], 'backup'))
 
         # configure the order of tasks to run during app lifetime
         app.on_startup.append(setup_db_schema)
