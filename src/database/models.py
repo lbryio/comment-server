@@ -12,24 +12,15 @@ from src.server.validation import is_valid_base_comment
 from src.misc import clean
 
 
-def get_database_connection():
-    # for now it's an sqlite database
-    db = SqliteDatabase()
-    return db
+def get_database_connection(dbms, db_name, **params):
+    if dbms == 'mysql':
+        return MySQLDatabase(db_name, **params)
+    else:
+        # return SqliteDatabase('/home/oleg/PycharmProjects/comment-server/database/default_pw.db')
+        return SqliteDatabase(db_name)
 
 
-
-database_proxy = DatabaseProxy()
-database = get_database_connection()
-database_proxy.initialize(database)
-
-
-class BaseModel(Model):
-    class Meta:
-        database = database_proxy
-
-
-class Channel(BaseModel):
+class Channel(Model):
     claim_id = TextField(column_name='ClaimId', primary_key=True)
     name = TextField(column_name='Name')
 
@@ -37,7 +28,7 @@ class Channel(BaseModel):
         table_name = 'CHANNEL'
 
 
-class Comment(BaseModel):
+class Comment(Model):
     comment = TextField(column_name='Body')
     channel = ForeignKeyField(
         backref='comments',
@@ -47,7 +38,7 @@ class Comment(BaseModel):
         null=True
     )
     comment_id = TextField(column_name='CommentId', primary_key=True)
-    is_hidden = BooleanField(column_name='IsHidden', constraints=[SQL("DEFAULT FALSE")])
+    is_hidden = BooleanField(column_name='IsHidden', constraints=[SQL("DEFAULT 0")])
     claim_id = TextField(column_name='LbryClaimId')
     parent = ForeignKeyField(
         column_name='ParentId',
@@ -63,7 +54,7 @@ class Comment(BaseModel):
     class Meta:
         table_name = 'COMMENT'
         indexes = (
-            (('author', 'comment_id'), False),
+            (('channel', 'comment_id'), False),
             (('claim_id', 'comment_id'), False),
         )
 
@@ -203,8 +194,7 @@ def create_comment(comment: str = None, claim_id: str = None,
 
     timestamp = int(time.time())
     comment_id = create_comment_id(comment, channel_id, timestamp)
-    with database_proxy.atomic():
-        new_comment = Comment.create(
+    new_comment = Comment.create(
             claim_id=claim_id,
             comment_id=comment_id,
             comment=comment,
@@ -214,7 +204,7 @@ def create_comment(comment: str = None, claim_id: str = None,
             signing_ts=signing_ts,
             timestamp=timestamp
         )
-        return get_comment(new_comment.comment_id)
+    return get_comment(new_comment.comment_id)
 
 
 def delete_comment(comment_id: str) -> bool:
@@ -223,8 +213,7 @@ def delete_comment(comment_id: str) -> bool:
     except DoesNotExist as e:
         raise ValueError from e
     else:
-        with database_proxy.atomic():
-            return 0 < comment.delete_instance(True, delete_nullable=True)
+        return 0 < comment.delete_instance(True, delete_nullable=True)
 
 
 def edit_comment(comment_id: str, new_comment: str, new_sig: str, new_ts: str) -> bool:
@@ -233,23 +222,21 @@ def edit_comment(comment_id: str, new_comment: str, new_sig: str, new_ts: str) -
     except DoesNotExist as e:
         raise ValueError from e
     else:
-        with database_proxy.atomic():
-            comment.comment = new_comment
-            comment.signature = new_sig
-            comment.signing_ts = new_ts
+        comment.comment = new_comment
+        comment.signature = new_sig
+        comment.signing_ts = new_ts
 
-            # todo: add a 'last-modified' timestamp
-            comment.timestamp = int(time.time())
-            return comment.save() > 0
+        # todo: add a 'last-modified' timestamp
+        comment.timestamp = int(time.time())
+        return comment.save() > 0
 
 
 def set_hidden_flag(comment_ids: typing.List[str], hidden=True) -> bool:
     # sets `is_hidden` flag for all `comment_ids` to the `hidden` param
-    with database_proxy.atomic():
-        update = (Comment
-                  .update(is_hidden=hidden)
-                  .where(Comment.comment_id.in_(comment_ids)))
-        return update.execute() > 0
+    update = (Comment
+              .update(is_hidden=hidden)
+              .where(Comment.comment_id.in_(comment_ids)))
+    return update.execute() > 0
 
 
 if __name__ == '__main__':
