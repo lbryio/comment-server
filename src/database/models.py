@@ -126,37 +126,6 @@ def get_comment(comment_id: str) -> dict:
             .pop())
 
 
-def get_comment_ids(claim_id: str = None, parent_id: str = None,
-                    page: int = 1, page_size: int = 50, flattened=False) -> dict:
-    results = comment_list(
-        claim_id, parent_id,
-        top_level=(parent_id is None),
-        page=page, page_size=page_size,
-        select_fields=['comment_id', 'parent_id']
-    )
-    if flattened:
-        results.update({
-            'items': [item['comment_id'] for item in results['items']],
-            'replies': [(item['comment_id'], item.get('parent_id')) for item in results['items']]
-        })
-    return results
-
-
-def get_comments_by_id(comment_ids: typing.Union[list, tuple]) -> dict:
-    expression = Comment.comment_id.in_(comment_ids)
-    return comment_list(expressions=expression, page_size=len(comment_ids))
-
-
-def get_channel_from_comment_id(comment_id: str) -> dict:
-    results = comment_list(
-        expressions=(Comment.comment_id == comment_id),
-        select_fields=['channel_name', 'channel_id', 'channel_url'],
-        page_size=1
-    )
-    # todo: make the return type here consistent
-    return results['items'].pop()
-
-
 def create_comment_id(comment: str, channel_id: str, timestamp: int):
     # We convert the timestamp from seconds into minutes
     # to prevent spammers from commenting the same BS everywhere.

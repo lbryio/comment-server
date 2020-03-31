@@ -1,16 +1,22 @@
 import asyncio
 import logging
 import time
+import typing
 
 from aiohttp import web
 from aiojobs.aiohttp import atomic
 
-import src.database.queries as db
-from src.database.writes import abandon_comment, create_comment
-from src.database.writes import hide_comments
-from src.database.writes import edit_comment
-from src.misc import clean_input_params
+from src.server.validation import validate_signature_from_claim
+from src.misc import clean_input_params, get_claim_from_id
 from src.server.errors import make_error, report_error
+from src.database.models import Comment, Channel
+from src.database.models import get_comment
+from src.database.models import comment_list
+from src.database.models import create_comment
+from src.database.models import edit_comment
+from src.database.models import delete_comment
+from src.database.models import set_hidden_flag
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,37 +26,127 @@ def ping(*args):
     return 'pong'
 
 
-def handle_get_channel_from_comment_id(app, kwargs: dict):
-    return db.get_channel_id_from_comment_id(app['reader'], **kwargs)
+def handle_get_channel_from_comment_id(app: web.Application, comment_id: str) -> dict:
+    comment = get_comment(comment_id)
+    return {
+        'channel_id': comment['channel_id'],
+        'channel_name': comment['channel_name']
+    }
 
 
-def handle_get_comment_ids(app, kwargs):
-    return db.get_comment_ids(app['reader'], **kwargs)
+def handle_get_comment_ids(
+        app: web.Application,
+        claim_id: str,
+        parent_id: str = None,
+        page: int = 1,
+        page_size: int = 50,
+        flattened=False
+) -> dict:
+    results = comment_list(
+        claim_id=claim_id,
+        parent_id=parent_id,
+        top_level=(parent_id is None),
+        page=page,
+        page_size=page_size,
+        select_fields=['comment_id', 'parent_id']
+    )
+    if flattened:
+        results.update({
+            'items': [item['comment_id'] for item in results['items']],
+            'replies': [(item['comment_id'], item.get('parent_id'))
+                        for item in results['items']]
+        })
+    return results
 
 
-def handle_get_claim_comments(app, kwargs):
-    return db.get_claim_comments(app['reader'], **kwargs)
+def handle_get_comments_by_id(
+        app: web.Application,
+        comment_ids: typing.Union[list, tuple]
+) -> dict:
+    expression = Comment.comment_id.in_(comment_ids)
+    return comment_list(expressions=expression, page_size=len(comment_ids))
 
 
-def handle_get_comments_by_id(app, kwargs):
-    return db.get_comments_by_id(app['reader'], **kwargs)
+def handle_get_claim_comments(
+        app: web.Application,
+        claim_id: str,
+        parent_id: str = None,
+        page: int = 1,
+        page_size: int = 50,
+        top_level: bool = False
+) -> dict:
+    return comment_list(
+        claim_id=claim_id,
+        parent_id=parent_id,
+        page=page,
+        page_size=page_size,
+        top_level=top_level
+    )
 
 
-def handle_get_claim_hidden_comments(app, kwargs):
-    return db.get_claim_hidden_comments(app['reader'], **kwargs)
+def handle_get_claim_hidden_comments(
+        app: web.Application,
+        claim_id: str,
+        hidden: bool,
+        page: int = 1,
+        page_size: int = 50,
+) -> dict:
+    exclude = 'hidden' if hidden else 'visible'
+    return comment_list(
+        claim_id=claim_id,
+        exclude_mode=exclude,
+        page=page,
+        page_size=page_size
+    )
+
+
+def get_channel_from_comment_id(app, comment_id: str) -> dict:
+    results = comment_list(
+        expressions=(Comment.comment_id == comment_id),
+        select_fields=['channel_name', 'channel_id', 'channel_url'],
+        page_size=1
+    )
+    # todo: make the return type here consistent
+    return results['items'].pop()
 
 
 async def handle_abandon_comment(app, params):
-    return {'abandoned': await abandon_comment(app, **params)}
+    # return {'abandoned': await abandon_comment(app, **params)}
+    raise NotImplementedError
 
 
-async def handle_hide_comments(app, params):
-    return {'hidden': await hide_comments(app, **params)}
+async def handle_hide_comments(app, pieces: list = None, claim_id: str = None) -> dict:
+
+    # return {'hidden': await hide_comments(app, **params)}
+    raise NotImplementedError
 
 
-async def handle_edit_comment(app, params):
-    if await edit_comment(app, **params):
-        return db.get_comment_or_none(app['reader'], params['comment_id'])
+async def handle_edit_comment(app, comment: str = None, comment_id: str = None,
+                              signature: str = None, signing_ts: str = None, **params) -> dict:
+    current = get_comment(comment_id)
+    channel_claim = await get_claim_from_id(app, current['channel_id'])
+    if not validate_signature_from_claim(channel_claim, signature, signing_ts, comment):
+        raise ValueError('Signature could not be validated')
+
+    with app['db'].atomic():
+        if not edit_comment(comment_id, comment, signature, signing_ts):
+            raise ValueError('Comment could not be edited')
+        return get_comment(comment_id)
+
+
+def handle_create_comment(app, comment: str = None, claim_id: str = None,
+                          parent_id: str = None, channel_id: str = None, channel_name: str = None,
+                          signature: str = None, signing_ts: str = None) -> dict:
+    with app['db'].atomic():
+        return create_comment(
+            comment=comment,
+            claim_id=claim_id,
+            parent_id=parent_id,
+            channel_id=channel_id,
+            channel_name=channel_name,
+            signature=signature,
+            signing_ts=signing_ts
+        )
 
 
 METHODS = {
@@ -59,8 +155,8 @@ METHODS = {
     'get_claim_hidden_comments': handle_get_claim_hidden_comments,  # this gets used
     'get_comment_ids': handle_get_comment_ids,
     'get_comments_by_id': handle_get_comments_by_id,    # this gets used
-    'get_channel_from_comment_id': handle_get_channel_from_comment_id,  # this gets used
-    'create_comment': create_comment,   # this gets used
+    'get_channel_from_comment_id': get_channel_from_comment_id,  # this gets used
+    'create_comment': handle_create_comment,   # this gets used
     'delete_comment': handle_abandon_comment,
     'abandon_comment': handle_abandon_comment,  # this gets used
     'hide_comments': handle_hide_comments,  # this gets used
@@ -78,17 +174,19 @@ async def process_json(app, body: dict) -> dict:
         start = time.time()
         try:
             if asyncio.iscoroutinefunction(METHODS[method]):
-                result = await METHODS[method](app, params)
+                result = await METHODS[method](app, **params)
             else:
-                result = METHODS[method](app, params)
-            response['result'] = result
+                result = METHODS[method](app, **params)
+
         except Exception as err:
-            logger.exception(f'Got {type(err).__name__}:')
+            logger.exception(f'Got {type(err).__name__}:\n{err}')
             if type(err) in (ValueError, TypeError):  # param error, not too important
                 response['error'] = make_error('INVALID_PARAMS', err)
             else:
                 response['error'] = make_error('INTERNAL', err)
-                await app['webhooks'].spawn(report_error(app, err, body))
+            await app['webhooks'].spawn(report_error(app, err, body))
+        else:
+            response['result'] = result
 
         finally:
             end = time.time()
