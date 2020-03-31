@@ -35,7 +35,6 @@ class DatabaseTestCase(unittest.TestCase):
         test_db.close()
 
 
-
 class AsyncioTestCase(unittest.TestCase):
     # Implementation inspired by discussion:
     #  https://bugs.python.org/issue32972

@@ -6,7 +6,7 @@ from faker.providers import misc
 
 from src.database.models import create_comment
 from src.database.models import delete_comment
-from src.database.models import comment_list, get_comment, get_comments_by_id
+from src.database.models import comment_list, get_comment
 from src.database.models import set_hidden_flag
 from test.testcase import DatabaseTestCase
 

@@ -12,14 +12,6 @@ from src.server.validation import is_valid_base_comment
 from src.misc import clean
 
 
-def get_database_connection(dbms, db_name, **params):
-    if dbms == 'mysql':
-        return MySQLDatabase(db_name, **params)
-    else:
-        # return SqliteDatabase('/home/oleg/PycharmProjects/comment-server/database/default_pw.db')
-        return SqliteDatabase(db_name)
-
-
 class Channel(Model):
     claim_id = TextField(column_name='ClaimId', primary_key=True)
     name = TextField(column_name='Name')
@@ -157,7 +149,7 @@ def create_comment(comment: str = None, claim_id: str = None,
         raise ValueError('Invalid Parameters given for comment')
 
     channel, _ = Channel.get_or_create(name=channel_name, claim_id=channel_id)
-    if parent_id:
+    if parent_id and not claim_id:
         parent: Comment = Comment.get_by_id(parent_id)
         claim_id = parent.claim_id
 
@@ -219,7 +211,4 @@ if __name__ == '__main__':
                      (Comment.claim_id ** '420%'))
     )
 
-    ids = get_comment_ids('4207d2378bf4340e68c9d88faf7ee24ea1a1f95a')
-
     print(json.dumps(comments, indent=4))
-    print(json.dumps(ids, indent=4))

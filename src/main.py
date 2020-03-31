@@ -84,12 +84,13 @@ def get_config(filepath):
 
 
 def setup_db_from_config(config: dict):
-    if 'sqlite' in config['database']:
+    mode = config['mode']
+    if config[mode]['database'] == 'sqlite':
         if not os.path.exists(DATABASE_DIR):
             os.mkdir(DATABASE_DIR)
 
-        config['db_path'] = os.path.join(
-            DATABASE_DIR, config['database']['sqlite']
+        config[mode]['db_file'] = os.path.join(
+            DATABASE_DIR, config[mode]['name']
         )
 
 
@@ -98,10 +99,15 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description='LBRY Comment Server')
     parser.add_argument('--port', type=int)
     parser.add_argument('--config', type=str)
+    parser.add_argument('--mode', type=str)
     args = parser.parse_args(argv)
 
     config = get_config(CONFIG_FILE) if not args.config else args.config
     setup_logging_from_config(config)
+
+    if args.mode:
+        config['mode'] = args.mode
+
     setup_db_from_config(config)
 
     if args.port:
