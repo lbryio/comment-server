@@ -14,7 +14,7 @@ setup(
     data_files=[('config', ['config/conf.json',])],
     include_package_data=True,
     install_requires=[
-        'mysql-connector-python',
+        'pymysql',
         'pyyaml',
         'Faker>=1.0.7',
         'asyncio',
