@@ -124,7 +124,7 @@ def get_comment(comment_id: str) -> dict:
 def create_comment_id(comment: str, channel_id: str, timestamp: int):
     # We convert the timestamp from seconds into minutes
     # to prevent spammers from commenting the same BS everywhere.
-    nearest_minute = str(math.floor(timestamp))
+    nearest_minute = str(math.floor(timestamp / 60))
 
     # don't use claim_id for the comment_id anymore so comments
     # are not unique to just one claim
