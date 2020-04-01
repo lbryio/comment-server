@@ -5,6 +5,7 @@ import typing
 
 from aiohttp import web
 from aiojobs.aiohttp import atomic
+from peewee import DoesNotExist
 
 from src.server.validation import validate_signature_from_claim
 from src.misc import clean_input_params, get_claim_from_id
@@ -110,9 +111,45 @@ def get_channel_from_comment_id(app, comment_id: str) -> dict:
     return results['items'].pop()
 
 
-async def handle_abandon_comment(app, params):
-    # return {'abandoned': await abandon_comment(app, **params)}
-    raise NotImplementedError
+async def handle_abandon_comment(
+        app: web.Application,
+        comment_id: str,
+        signature: str,
+        signing_ts: str,
+        **kwargs,
+) -> dict:
+    comment = get_comment(comment_id)
+    try:
+        channel = await get_claim_from_id(app, comment['channel_id'])
+    except DoesNotExist:
+        raise ValueError('Could not find a channel associated with the given comment')
+    else:
+        if not validate_signature_from_claim(channel, signature, signing_ts, comment_id):
+            raise ValueError('Abandon signature could not be validated')
+
+    with app['db'].atomic():
+        return {
+            'abandoned': delete_comment(comment_id)
+        }
+
+
+async def handle_hide_comments(app: web.Application, pieces: list, hide: bool = True) -> dict:
+    # let's get all the distinct claim_ids from the list of comment_ids
+    pieces_by_id = {p['comment_id']: p for p in pieces}
+    comment_ids = list(pieces_by_id.keys())
+    comments = (Comment
+                .select(Comment.comment_id, Comment.claim_id)
+                .where(Comment.comment_id.in_(comment_ids))
+                .tuples())
+
+    # resolve the claims and map them to their corresponding comment_ids
+    claims = {}
+    for comment_id, claim_id in comments:
+        try:
+            # try and resolve the claim, if fails then we mark it as null
+            # and remove the associated comment from the pieces
+            if claim_id not in claims:
+                claims[claim_id] = await get_claim_from_id(app, claim_id)
 
 
 async def handle_hide_comments(app, pieces: list = None, claim_id: str = None) -> dict:

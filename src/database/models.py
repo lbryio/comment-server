@@ -113,9 +113,12 @@ def comment_list(claim_id: str = None, parent_id: str = None,
 
 
 def get_comment(comment_id: str) -> dict:
-    return (comment_list(expressions=(Comment.comment_id == comment_id), page_size=1)
-            .get('items')
-            .pop())
+    try:
+        comment = comment_list(expressions=(Comment.comment_id == comment_id), page_size=1).get('items').pop()
+    except IndexError:
+        raise ValueError(f'Comment does not exist with id {comment_id}')
+    else:
+        return comment
 
 
 def create_comment_id(comment: str, channel_id: str, timestamp: int):

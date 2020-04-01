@@ -84,13 +84,17 @@ async def hide_comments(app, pieces: list) -> list:
     # TODO: Amortize this process
     claims = {}
     comments_to_hide = []
+    # go through a list of dict objects
     for p in pieces:
+        # maps the comment_id from the piece to a claim_id
         claim_id = comment_cids[p['comment_id']]
+        # resolve the claim from its id
         if claim_id not in claims:
             claim = await get_claim_from_id(app, claim_id)
             if claim:
                 claims[claim_id] = claim
 
+        # get the claim's signing channel, then use it to validate the hidden comment
         channel = claims[claim_id].get('signing_channel')
         if validate_signature_from_claim(channel, p['signature'], p['signing_ts'], p['comment_id']):
             comments_to_hide.append(p)
