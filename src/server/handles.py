@@ -101,16 +101,6 @@ def handle_get_claim_hidden_comments(
     )
 
 
-def get_channel_from_comment_id(app, comment_id: str) -> dict:
-    results = comment_list(
-        expressions=(Comment.comment_id == comment_id),
-        select_fields=['channel_name', 'channel_id', 'channel_url'],
-        page_size=1
-    )
-    # todo: make the return type here consistent
-    return results['items'].pop()
-
-
 async def handle_abandon_comment(
         app: web.Application,
         comment_id: str,
@@ -218,7 +208,7 @@ METHODS = {
     'get_claim_hidden_comments': handle_get_claim_hidden_comments,  # this gets used
     'get_comment_ids': handle_get_comment_ids,
     'get_comments_by_id': handle_get_comments_by_id,    # this gets used
-    'get_channel_from_comment_id': get_channel_from_comment_id,  # this gets used
+    'get_channel_from_comment_id': handle_get_channel_from_comment_id,  # this gets used
     'create_comment': handle_create_comment,   # this gets used
     'delete_comment': handle_abandon_comment,
     'abandon_comment': handle_abandon_comment,  # this gets used
