@@ -13,15 +13,15 @@ from src.misc import clean
 
 
 class Channel(Model):
-    claim_id = TextField(column_name='ClaimId', primary_key=True)
-    name = TextField(column_name='Name')
+    claim_id = CharField(column_name='ClaimId', primary_key=True, max_length=40)
+    name = CharField(column_name='Name', max_length=256)
 
     class Meta:
         table_name = 'CHANNEL'
 
 
 class Comment(Model):
-    comment = TextField(column_name='Body')
+    comment = CharField(column_name='Body', max_length=2000)
     channel = ForeignKeyField(
         backref='comments',
         column_name='ChannelId',
@@ -29,9 +29,9 @@ class Comment(Model):
         model=Channel,
         null=True
     )
-    comment_id = TextField(column_name='CommentId', primary_key=True)
+    comment_id = CharField(column_name='CommentId', primary_key=True, max_length=64)
     is_hidden = BooleanField(column_name='IsHidden', constraints=[SQL("DEFAULT 0")])
-    claim_id = TextField(column_name='LbryClaimId')
+    claim_id = CharField(max_length=40, column_name='LbryClaimId')
     parent = ForeignKeyField(
         column_name='ParentId',
         field='comment_id',
@@ -39,7 +39,7 @@ class Comment(Model):
         null=True,
         backref='replies'
     )
-    signature = TextField(column_name='Signature', null=True, unique=True)
+    signature = CharField(max_length=128, column_name='Signature', null=True, unique=True)
     signing_ts = TextField(column_name='SigningTs', null=True)
     timestamp = IntegerField(column_name='Timestamp')
 
