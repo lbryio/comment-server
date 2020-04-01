@@ -151,11 +151,37 @@ async def handle_hide_comments(app: web.Application, pieces: list, hide: bool = 
             if claim_id not in claims:
                 claims[claim_id] = await get_claim_from_id(app, claim_id)
 
+            # try to get a public key to validate
+            if claims[claim_id] is None or 'signing_channel' not in claims[claim_id]:
+                raise ValueError(f'could not get signing channel from claim_id: {claim_id}')
 
-async def handle_hide_comments(app, pieces: list = None, claim_id: str = None) -> dict:
+            # try to validate signature
+            else:
+                channel = claims[claim_id]['signing_channel']
+                piece = pieces_by_id[comment_id]
+                is_valid_signature = validate_signature_from_claim(
+                        claim=channel,
+                        signature=piece['signature'],
+                        signing_ts=piece['signing_ts'],
+                        data=piece['comment_id']
+                )
+                if not is_valid_signature:
+                    raise ValueError(f'could not validate signature on comment_id: {comment_id}')
 
-    # return {'hidden': await hide_comments(app, **params)}
-    raise NotImplementedError
+        except ValueError:
+            # remove the piece from being hidden
+            pieces_by_id.pop(comment_id)
+
+    # remaining items in pieces_by_id have been able to successfully validate
+    with app['db'].atomic():
+        set_hidden_flag(list(pieces_by_id.keys()), hidden=hide)
+
+    query = Comment.select().where(Comment.comment_id.in_(comment_ids)).objects()
+    result = {
+        'hidden': [c.comment_id for c in query if c.is_hidden],
+        'visible': [c.comment_id for c in query if not c.is_hidden],
+    }
+    return result
 
 
 async def handle_edit_comment(app, comment: str = None, comment_id: str = None,
