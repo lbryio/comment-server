@@ -187,6 +187,7 @@ async def handle_edit_comment(app, comment: str = None, comment_id: str = None,
         return get_comment(comment_id)
 
 
+# TODO: retrieve stake amounts for each channel & store in db
 def handle_create_comment(app, comment: str = None, claim_id: str = None,
                           parent_id: str = None, channel_id: str = None, channel_name: str = None,
                           signature: str = None, signing_ts: str = None) -> dict:
