@@ -51,11 +51,31 @@ def claim_id_is_valid(claim_id: str) -> bool:
 
 
 # default to None so params can be treated as kwargs; param count becomes more manageable
-def is_valid_base_comment(comment: str = None, claim_id: str = None, parent_id: str = None, **kwargs) -> bool:
-    return comment and body_is_valid(comment) and \
-           ((claim_id and claim_id_is_valid(claim_id)) or  # parentid is used in place of claimid in replies
-            (parent_id and comment_id_is_valid(parent_id))) \
-           and is_valid_credential_input(**kwargs)
+def is_valid_base_comment(
+        comment: str = None,
+        claim_id: str = None,
+        parent_id: str = None,
+        strict: bool = False,
+        **kwargs,
+) -> bool:
+    try:
+        assert comment and body_is_valid(comment)
+        # strict mode assumes that the parent_id might not exist
+        if strict:
+            assert claim_id and claim_id_is_valid(claim_id)
+            assert parent_id is None or comment_id_is_valid(parent_id)
+        # non-strict removes reference restrictions
+        else:
+            assert claim_id or parent_id
+            if claim_id:
+                assert claim_id_is_valid(claim_id)
+            else:
+                assert comment_id_is_valid(parent_id)
+
+    except AssertionError:
+        return False
+    else:
+        return is_valid_credential_input(**kwargs)
 
 
 def is_valid_credential_input(channel_id: str = None, channel_name: str = None,

@@ -1,1 +1,3 @@
-config/conf.json
+config/conf.yml
+docker-compose.yml
+

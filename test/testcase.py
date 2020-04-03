@@ -1,12 +1,38 @@
 import os
 import pathlib
 import unittest
-from asyncio.runners import _cancel_all_tasks  # type: ignore
 from unittest.case import _Outcome
 
 import asyncio
+from asyncio.runners import _cancel_all_tasks  # type: ignore
+from peewee import *
 
-from src.database.queries import obtain_connection, setup_database
+from src.database.models import Channel, Comment
+
+
+test_db = SqliteDatabase(':memory:')
+
+
+MODELS = [Channel, Comment]
+
+
+class DatabaseTestCase(unittest.TestCase):
+    def __init__(self, methodName='DatabaseTest'):
+        super().__init__(methodName)
+
+    def setUp(self) -> None:
+        super().setUp()
+        test_db.bind(MODELS, bind_refs=False, bind_backrefs=False)
+
+        test_db.connect()
+        test_db.create_tables(MODELS)
+
+    def tearDown(self) -> None:
+        # drop tables for next test
+        test_db.drop_tables(MODELS)
+
+        # close connection
+        test_db.close()
 
 
 class AsyncioTestCase(unittest.TestCase):
@@ -116,22 +142,4 @@ class AsyncioTestCase(unittest.TestCase):
                 if asyncio.iscoroutine(maybe_coroutine):
                     self.loop.run_until_complete(maybe_coroutine)
 
-
-class DatabaseTestCase(unittest.TestCase):
-    db_file = 'test.db'
-
-    def __init__(self, methodName='DatabaseTest'):
-        super().__init__(methodName)
-        if pathlib.Path(self.db_file).exists():
-            os.remove(self.db_file)
-
-    def setUp(self) -> None:
-        super().setUp()
-        setup_database(self.db_file)
-        self.conn = obtain_connection(self.db_file)
-        self.addCleanup(self.conn.close)
-        self.addCleanup(os.remove, self.db_file)
-
-    def tearDown(self) -> None:
-        self.conn.close()
 

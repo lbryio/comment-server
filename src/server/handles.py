@@ -1,16 +1,23 @@
 import asyncio
 import logging
 import time
+import typing
 
 from aiohttp import web
 from aiojobs.aiohttp import atomic
+from peewee import DoesNotExist
 
-import src.database.queries as db
-from src.database.writes import abandon_comment, create_comment
-from src.database.writes import hide_comments
-from src.database.writes import edit_comment
-from src.server.misc import clean_input_params
+from src.server.validation import validate_signature_from_claim
+from src.misc import clean_input_params, get_claim_from_id
 from src.server.errors import make_error, report_error
+from src.database.models import Comment, Channel
+from src.database.models import get_comment
+from src.database.models import comment_list
+from src.database.models import create_comment
+from src.database.models import edit_comment
+from src.database.models import delete_comment
+from src.database.models import set_hidden_flag
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,51 +27,194 @@ def ping(*args):
     return 'pong'
 
 
-def handle_get_channel_from_comment_id(app, kwargs: dict):
-    return db.get_channel_id_from_comment_id(app['reader'], **kwargs)
+def handle_get_channel_from_comment_id(app: web.Application, comment_id: str) -> dict:
+    comment = get_comment(comment_id)
+    return {
+        'channel_id': comment['channel_id'],
+        'channel_name': comment['channel_name']
+    }
 
 
-def handle_get_comment_ids(app, kwargs):
-    return db.get_comment_ids(app['reader'], **kwargs)
+def handle_get_comment_ids(
+        app: web.Application,
+        claim_id: str,
+        parent_id: str = None,
+        page: int = 1,
+        page_size: int = 50,
+        flattened=False
+) -> dict:
+    results = comment_list(
+        claim_id=claim_id,
+        parent_id=parent_id,
+        top_level=(parent_id is None),
+        page=page,
+        page_size=page_size,
+        select_fields=['comment_id', 'parent_id']
+    )
+    if flattened:
+        results.update({
+            'items': [item['comment_id'] for item in results['items']],
+            'replies': [(item['comment_id'], item.get('parent_id'))
+                        for item in results['items']]
+        })
+    return results
 
 
-def handle_get_claim_comments(app, kwargs):
-    return db.get_claim_comments(app['reader'], **kwargs)
+def handle_get_comments_by_id(
+        app: web.Application,
+        comment_ids: typing.Union[list, tuple]
+) -> dict:
+    expression = Comment.comment_id.in_(comment_ids)
+    return comment_list(expressions=expression, page_size=len(comment_ids))
 
 
-def handle_get_comments_by_id(app, kwargs):
-    return db.get_comments_by_id(app['reader'], **kwargs)
+def handle_get_claim_comments(
+        app: web.Application,
+        claim_id: str,
+        parent_id: str = None,
+        page: int = 1,
+        page_size: int = 50,
+        top_level: bool = False
+) -> dict:
+    return comment_list(
+        claim_id=claim_id,
+        parent_id=parent_id,
+        page=page,
+        page_size=page_size,
+        top_level=top_level
+    )
 
 
-def handle_get_claim_hidden_comments(app, kwargs):
-    return db.get_claim_hidden_comments(app['reader'], **kwargs)
+def handle_get_claim_hidden_comments(
+        app: web.Application,
+        claim_id: str,
+        hidden: bool,
+        page: int = 1,
+        page_size: int = 50,
+) -> dict:
+    exclude = 'hidden' if hidden else 'visible'
+    return comment_list(
+        claim_id=claim_id,
+        exclude_mode=exclude,
+        page=page,
+        page_size=page_size
+    )
 
 
-async def handle_abandon_comment(app, params):
-    return {'abandoned': await abandon_comment(app, **params)}
+async def handle_abandon_comment(
+        app: web.Application,
+        comment_id: str,
+        signature: str,
+        signing_ts: str,
+        **kwargs,
+) -> dict:
+    comment = get_comment(comment_id)
+    try:
+        channel = await get_claim_from_id(app, comment['channel_id'])
+    except DoesNotExist:
+        raise ValueError('Could not find a channel associated with the given comment')
+    else:
+        if not validate_signature_from_claim(channel, signature, signing_ts, comment_id):
+            raise ValueError('Abandon signature could not be validated')
+
+    with app['db'].atomic():
+        return {
+            'abandoned': delete_comment(comment_id)
+        }
 
 
-async def handle_hide_comments(app, params):
-    return {'hidden': await hide_comments(app, **params)}
+async def handle_hide_comments(app: web.Application, pieces: list, hide: bool = True) -> dict:
+    # let's get all the distinct claim_ids from the list of comment_ids
+    pieces_by_id = {p['comment_id']: p for p in pieces}
+    comment_ids = list(pieces_by_id.keys())
+    comments = (Comment
+                .select(Comment.comment_id, Comment.claim_id)
+                .where(Comment.comment_id.in_(comment_ids))
+                .tuples())
+
+    # resolve the claims and map them to their corresponding comment_ids
+    claims = {}
+    for comment_id, claim_id in comments:
+        try:
+            # try and resolve the claim, if fails then we mark it as null
+            # and remove the associated comment from the pieces
+            if claim_id not in claims:
+                claims[claim_id] = await get_claim_from_id(app, claim_id)
+
+            # try to get a public key to validate
+            if claims[claim_id] is None or 'signing_channel' not in claims[claim_id]:
+                raise ValueError(f'could not get signing channel from claim_id: {claim_id}')
+
+            # try to validate signature
+            else:
+                channel = claims[claim_id]['signing_channel']
+                piece = pieces_by_id[comment_id]
+                is_valid_signature = validate_signature_from_claim(
+                        claim=channel,
+                        signature=piece['signature'],
+                        signing_ts=piece['signing_ts'],
+                        data=piece['comment_id']
+                )
+                if not is_valid_signature:
+                    raise ValueError(f'could not validate signature on comment_id: {comment_id}')
+
+        except ValueError:
+            # remove the piece from being hidden
+            pieces_by_id.pop(comment_id)
+
+    # remaining items in pieces_by_id have been able to successfully validate
+    with app['db'].atomic():
+        set_hidden_flag(list(pieces_by_id.keys()), hidden=hide)
+
+    query = Comment.select().where(Comment.comment_id.in_(comment_ids)).objects()
+    result = {
+        'hidden': [c.comment_id for c in query if c.is_hidden],
+        'visible': [c.comment_id for c in query if not c.is_hidden],
+    }
+    return result
 
 
-async def handle_edit_comment(app, params):
-    if await edit_comment(app, **params):
-        return db.get_comment_or_none(app['reader'], params['comment_id'])
+async def handle_edit_comment(app, comment: str = None, comment_id: str = None,
+                              signature: str = None, signing_ts: str = None, **params) -> dict:
+    current = get_comment(comment_id)
+    channel_claim = await get_claim_from_id(app, current['channel_id'])
+    if not validate_signature_from_claim(channel_claim, signature, signing_ts, comment):
+        raise ValueError('Signature could not be validated')
+
+    with app['db'].atomic():
+        if not edit_comment(comment_id, comment, signature, signing_ts):
+            raise ValueError('Comment could not be edited')
+        return get_comment(comment_id)
+
+
+# TODO: retrieve stake amounts for each channel & store in db
+def handle_create_comment(app, comment: str = None, claim_id: str = None,
+                          parent_id: str = None, channel_id: str = None, channel_name: str = None,
+                          signature: str = None, signing_ts: str = None) -> dict:
+    with app['db'].atomic():
+        return create_comment(
+            comment=comment,
+            claim_id=claim_id,
+            parent_id=parent_id,
+            channel_id=channel_id,
+            channel_name=channel_name,
+            signature=signature,
+            signing_ts=signing_ts
+        )
 
 
 METHODS = {
     'ping': ping,
-    'get_claim_comments': handle_get_claim_comments,
-    'get_claim_hidden_comments': handle_get_claim_hidden_comments,
+    'get_claim_comments': handle_get_claim_comments,    # this gets used
+    'get_claim_hidden_comments': handle_get_claim_hidden_comments,  # this gets used
     'get_comment_ids': handle_get_comment_ids,
-    'get_comments_by_id': handle_get_comments_by_id,
-    'get_channel_from_comment_id': handle_get_channel_from_comment_id,
-    'create_comment': create_comment,
+    'get_comments_by_id': handle_get_comments_by_id,    # this gets used
+    'get_channel_from_comment_id': handle_get_channel_from_comment_id,  # this gets used
+    'create_comment': handle_create_comment,   # this gets used
     'delete_comment': handle_abandon_comment,
-    'abandon_comment': handle_abandon_comment,
-    'hide_comments': handle_hide_comments,
-    'edit_comment': handle_edit_comment
+    'abandon_comment': handle_abandon_comment,  # this gets used
+    'hide_comments': handle_hide_comments,  # this gets used
+    'edit_comment': handle_edit_comment     # this gets used
 }
 
 
@@ -78,17 +228,19 @@ async def process_json(app, body: dict) -> dict:
         start = time.time()
         try:
             if asyncio.iscoroutinefunction(METHODS[method]):
-                result = await METHODS[method](app, params)
+                result = await METHODS[method](app, **params)
             else:
-                result = METHODS[method](app, params)
-            response['result'] = result
+                result = METHODS[method](app, **params)
+
         except Exception as err:
-            logger.exception(f'Got {type(err).__name__}:')
+            logger.exception(f'Got {type(err).__name__}:\n{err}')
             if type(err) in (ValueError, TypeError):  # param error, not too important
                 response['error'] = make_error('INVALID_PARAMS', err)
             else:
                 response['error'] = make_error('INTERNAL', err)
-                await app['webhooks'].spawn(report_error(app, err, body))
+            await app['webhooks'].spawn(report_error(app, err, body))
+        else:
+            response['result'] = result
 
         finally:
             end = time.time()

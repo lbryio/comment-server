@@ -9,11 +9,16 @@ from faker.providers import internet
 from faker.providers import lorem
 from faker.providers import misc
 
-from src.settings import config
+from src.main import get_config, CONFIG_FILE
 from src.server import app
 from src.server.validation import is_valid_base_comment
 
 from test.testcase import AsyncioTestCase
+
+
+config = get_config(CONFIG_FILE)
+config['mode'] = 'testing'
+config['testing']['file'] = ':memory:'
 
 
 if 'slack_webhook' in config:
@@ -71,10 +76,10 @@ def create_test_comments(values: iter, **default):
 
 
 class ServerTest(AsyncioTestCase):
-    db_file = 'test.db'
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        config['mode'] = 'testing'
+        config['testing']['file'] = ':memory:'
         self.host = 'localhost'
         self.port = 5931
 
@@ -85,11 +90,10 @@ class ServerTest(AsyncioTestCase):
     @classmethod
     def tearDownClass(cls) -> None:
         print('exit reached')
-        os.remove(cls.db_file)
 
     async def asyncSetUp(self):
         await super().asyncSetUp()
-        self.server = app.CommentDaemon(config, db_file=self.db_file)
+        self.server = app.CommentDaemon(config)
         await self.server.start(host=self.host, port=self.port)
         self.addCleanup(self.server.stop)
 
@@ -135,14 +139,16 @@ class ServerTest(AsyncioTestCase):
         test_all = create_test_comments(replace.keys(), **{
             k: None for k in replace.keys()
         })
+        test_all.reverse()
         for test in test_all:
-            with self.subTest(test=test):
+            nulls = 'null fields: ' + ', '.join(k for k, v in test.items() if not v)
+            with self.subTest(test=nulls):
                 message = await self.post_comment(**test)
                 self.assertTrue('result' in message or 'error' in message)
                 if 'error' in message:
-                    self.assertFalse(is_valid_base_comment(**test))
+                    self.assertFalse(is_valid_base_comment(**test, strict=True))
                 else:
-                    self.assertTrue(is_valid_base_comment(**test))
+                    self.assertTrue(is_valid_base_comment(**test, strict=True))
 
     async def test04CreateAllReplies(self):
         claim_id = '1d8a5cc39ca02e55782d619e67131c0a20843be8'
@@ -220,7 +226,8 @@ class ListCommentsTest(AsyncioTestCase):
         super().__init__(*args, **kwargs)
         self.host = 'localhost'
         self.port = 5931
-        self.db_file = 'list_test.db'
+        config['mode'] = 'testing'
+        config['testing']['file'] = ':memory:'
         self.claim_id = '1d8a5cc39ca02e55782d619e67131c0a20843be8'
         self.comment_ids = None
 
@@ -231,10 +238,6 @@ class ListCommentsTest(AsyncioTestCase):
     async def post_comment(self, **params):
         return await jsonrpc_post(self.url, 'create_comment', **params)
 
-    def tearDown(self) -> None:
-        print('exit reached')
-        os.remove(self.db_file)
-
     async def create_lots_of_comments(self, n=23):
         self.comment_list = [{key: self.replace[key]() for key in self.replace.keys()} for _ in range(23)]
         for comment in self.comment_list:
@@ -244,7 +247,7 @@ class ListCommentsTest(AsyncioTestCase):
 
     async def asyncSetUp(self):
         await super().asyncSetUp()
-        self.server = app.CommentDaemon(config, db_file=self.db_file)
+        self.server = app.CommentDaemon(config)
         await self.server.start(self.host, self.port)
         self.addCleanup(self.server.stop)
 

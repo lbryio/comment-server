@@ -1,7 +1,28 @@
 sudo: required
 language: python
 dist: xenial
-python: 3.7
+python: 3.8
+
+# for docker-compose
+services:
+  - docker
+
+# to avoid "well it works on my computer" moments
+env:
+  - DOCKER_COMPOSE_VERSION=1.25.4
+
+before_install:
+  # ensure docker-compose version is as specified above
+  - sudo rm /usr/local/bin/docker-compose
+  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
+  - chmod +x docker-compose
+  - sudo mv docker-compose /usr/local/bin
+  # refresh docker images
+  - sudo apt-get update
+
+before_script:
+  - docker-compose up -d
+
 
 jobs:
   include:
