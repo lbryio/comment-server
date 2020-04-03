@@ -1,0 +1,30 @@
+---
+# for running local-tests without using MySQL for now
+testing:
+  database: sqlite
+  file: comments.db
+  pragmas:
+    journal_mode: wal
+    cache_size: 64000
+    foreign_keys: 0
+    ignore_check_constraints: 1
+    synchronous: 0
+
+# actual database should be running MySQL
+production:
+  database: mysql
+  name: lbry
+  user: lbry
+  password: lbry
+  host: localhost
+  port: 3306
+
+mode: production
+logging:
+  format: "%(asctime)s | %(levelname)s | %(name)s | %(module)s.%(funcName)s:%(lineno)d
+    | %(message)s"
+  aiohttp_format: "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+  datefmt: "%Y-%m-%d %H:%M:%S"
+host: localhost
+port: 5921
+lbrynet: http://localhost:5279
