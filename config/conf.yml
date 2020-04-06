@@ -12,6 +12,7 @@ testing:
 
 # actual database should be running MySQL
 production:
+  charset: utf8mb4
   database: mysql
   name: social
   user: lbry

@@ -13,24 +13,28 @@ from src.misc import clean
 
 
 class Channel(Model):
-    claim_id = CharField(column_name='ClaimId', primary_key=True, max_length=40)
-    name = CharField(column_name='Name', max_length=256)
+    claim_id = CharField(column_name='claimid', primary_key=True, max_length=40)
+    name = CharField(column_name='name', max_length=256)
 
     class Meta:
         table_name = 'CHANNEL'
 
 
 class Comment(Model):
-    comment = CharField(column_name='Body', max_length=2000)
+    comment = CharField(
+        column_name='body',
+        max_length=5000,
+
+    )
     channel = ForeignKeyField(
         backref='comments',
-        column_name='ChannelId',
+        column_name='channelid',
         field='claim_id',
         model=Channel,
         null=True
     )
-    comment_id = CharField(column_name='CommentId', primary_key=True, max_length=64)
-    is_hidden = BooleanField(column_name='IsHidden', constraints=[SQL("DEFAULT 0")])
+    comment_id = CharField(column_name='commentid', primary_key=True, max_length=64)
+    is_hidden = BooleanField(column_name='ishidden', constraints=[SQL("DEFAULT 0")])
     claim_id = CharField(max_length=40, column_name='LbryClaimId')
     parent = ForeignKeyField(
         column_name='ParentId',

@@ -6,6 +6,7 @@ services:
   mysql:
     image: mysql/mysql-server:5.7.27
     restart: "no"
+    command: --character_set_server=utf8mb4 --max_allowed_packet=1073741824
     ports:
       - "3306:3306"
     environment:

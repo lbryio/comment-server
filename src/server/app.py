@@ -28,6 +28,7 @@ def setup_database(app):
             host=config[mode]['host'],
             password=config[mode]['password'],
             port=config[mode]['port'],
+            charset=config[mode]['charset'],
         )
     elif config[mode]['database'] == 'sqlite':
         app['db'] = SqliteDatabase(

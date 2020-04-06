@@ -16,7 +16,7 @@ async def get_claim_from_id(app, claim_id, **kwargs):
 
 def clean_input_params(kwargs: dict):
     for k, v in kwargs.items():
-        if type(v) is str and k is not 'comment':
+        if type(v) is str and k != 'comment':
             kwargs[k] = v.strip()
             if k in ID_LIST:
                 kwargs[k] = v.lower()
