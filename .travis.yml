@@ -30,6 +30,5 @@ jobs:
       name: "Unit Tests"
       install:
         - pip install -e .
-        - mkdir database
       script:
         - python -m unittest
