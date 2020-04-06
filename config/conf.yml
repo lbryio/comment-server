@@ -13,7 +13,7 @@ testing:
 # actual database should be running MySQL
 production:
   database: mysql
-  name: lbry
+  name: social
   user: lbry
   password: lbry
   host: localhost
