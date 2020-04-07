@@ -3,34 +3,36 @@
 [![Build Status](https://travis-ci.com/lbryio/comment-server.svg?branch=master)](https://travis-ci.com/lbryio/comment-server)
 [![Maintainability](https://api.codeclimate.com/v1/badges/22f420b8b5f2373fd885/maintainability)](https://codeclimate.com/github/lbryio/comment-server/maintainability)  
 
-This is the code for the LBRY Comment Server. 
-Fork it, run it, set it on fire. Up to you.
-
 
 ## Before Installing
 
-Comment Deletion requires having the [`lbry-sdk`](https://github.com/lbryio/lbry-sdk) 
+Install the [`lbry-sdk`](https://github.com/lbryio/lbry-sdk) 
 in order to validate & properly delete comments. 
 
 
- 
- 
+
 ## Installation
 
 #### Installing the server:
 ```bash
 
-$ git clone https://github.com/osilkin98/comment-server
+$ git clone https://github.com/lbryio/comment-server
 $ cd comment-server
 
 # create a virtual environment
-$ virtualenv --python=python3 venv
+$ virtualenv --python=python3.8 venv
 
 # Enter the virtual environment
 $ source venv/bin/activate
 
-# install the Server as a Executable Target
-(venv) $ python setup.py develop
+# Install required dependencies
+(venv) $ pip install -e .
+
+# Run the server
+(venv) $ python src/main.py \
+          --port=5921 \          # use a different port besides the default
+          --config=conf.yml \   # provide a custom config file
+           & \  # detach and run the service in the background 
 ```
 
 ### Installing the systemd Service Monitor
@@ -70,15 +72,10 @@ To Test the database, simply run:
 
 There are basic tests to run against the server, though they require 
 that there is a server instance running, though the database
- chosen may have to be edited in `config/conf.json`.
+ chosen may have to be edited in `config/conf.yml`.
 
 Additionally there are HTTP requests that can be send with whatever 
 software you choose to test the integrity of the comment server.
-
-## Schema
-
-
-![schema](schema.png)
 
 
 ## Contributing
