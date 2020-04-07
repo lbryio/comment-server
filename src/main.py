@@ -1,5 +1,4 @@
 import argparse
-import json
 import yaml
 import logging
 import logging.config

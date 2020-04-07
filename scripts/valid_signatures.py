@@ -2,11 +2,12 @@ import binascii
 import logging
 import hashlib
 import json
+# todo: remove sqlite3 as a dependency
 import sqlite3
 import asyncio
 import aiohttp
 
-from server.validation import is_signature_valid, get_encoded_signature
+from src.server.validation import is_signature_valid, get_encoded_signature
 
 logger = logging.getLogger(__name__)
 
