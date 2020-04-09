@@ -1,3 +1,5 @@
+import json
+
 import logging
 import aiohttp
 
@@ -32,8 +34,11 @@ def make_error(error, exc=None) -> dict:
 async def report_error(app, exc, body: dict):
     try:
         if 'slack_webhook' in app['config']:
+            body_dump = json.dumps(body, indent=4)
+            exec_name = type(exc).__name__
+            exec_body = str(exc)
             message = {
-                "text": f"Got `{type(exc).__name__}`: `\n{str(exc)}`\n```{body}```"
+                "text": f"Got `{exec_name}`: `\n{exec_body}`\n```{body_dump}```"
             }
             async with aiohttp.ClientSession() as sesh:
                 async with sesh.post(app['config']['slack_webhook'], json=message) as resp:
