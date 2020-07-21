@@ -7,6 +7,7 @@ from aiohttp import web
 from aiojobs.aiohttp import atomic
 from peewee import DoesNotExist
 
+from src.server.external import send_notification
 from src.server.validation import validate_signature_from_claim
 from src.misc import clean_input_params, get_claim_from_id
 from src.server.errors import make_error, report_error
@@ -116,7 +117,7 @@ async def handle_abandon_comment(
     else:
         if not validate_signature_from_claim(channel, signature, signing_ts, comment_id):
             raise ValueError('Abandon signature could not be validated')
-
+    await app['webhooks'].spawn(send_notification(app, 'DELETE', comment))
     with app['db'].atomic():
         return {
             'abandoned': delete_comment(comment_id)
@@ -184,15 +185,17 @@ async def handle_edit_comment(app, comment: str = None, comment_id: str = None,
     with app['db'].atomic():
         if not edit_comment(comment_id, comment, signature, signing_ts):
             raise ValueError('Comment could not be edited')
-        return get_comment(comment_id)
+        updated_comment = get_comment(comment_id)
+        await app['webhooks'].spawn(send_notification(app, 'UPDATE', updated_comment))
+        return updated_comment
 
 
 # TODO: retrieve stake amounts for each channel & store in db
-def handle_create_comment(app, comment: str = None, claim_id: str = None,
+async def handle_create_comment(app, comment: str = None, claim_id: str = None,
                           parent_id: str = None, channel_id: str = None, channel_name: str = None,
                           signature: str = None, signing_ts: str = None) -> dict:
     with app['db'].atomic():
-        return create_comment(
+        comment = create_comment(
             comment=comment,
             claim_id=claim_id,
             parent_id=parent_id,
@@ -201,6 +204,8 @@ def handle_create_comment(app, comment: str = None, claim_id: str = None,
             signature=signature,
             signing_ts=signing_ts
         )
+        await app['webhooks'].spawn(send_notification(app, 'CREATE', comment))
+        return comment
 
 
 METHODS = {
