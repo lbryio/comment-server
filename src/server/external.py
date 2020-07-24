@@ -37,6 +37,10 @@ def create_notification_batch(action: str, comments: List[dict]) -> List[dict]:
         }
         if comment.get('channel_id'):
             event['channel_id'] = comment['channel_id']
+        if comment.get('parent_id'):
+            event['parent_id'] = comment['parent_id']
+        if comment.get('comment'):
+            event['comment'] = comment['comment']
         events.append(event)
     return events
 
