@@ -29,3 +29,6 @@ logging:
 host: localhost
 port: 5921
 lbrynet: http://localhost:5279
+notifications:
+  url: https://api.lbry.com/event/comment
+  auth_token: mytoken

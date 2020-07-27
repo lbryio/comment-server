@@ -51,6 +51,50 @@ class Comment(Model):
         )
 
 
+class CommentOpinion(Model):
+    id = BigAutoField(column_name='id', primary_key=True)
+    comment = ForeignKeyField(
+        backref='opinions',
+        column_name='commentid',
+        field='comment_id',
+        model=Comment,
+        null=True
+    )
+    channel = ForeignKeyField(
+        backref='opinions',
+        column_name='channelid',
+        field='claim_id',
+        model=Channel,
+        null=True
+    )
+    signature = FixedCharField(max_length=128, column_name='signature', null=True, unique=True)
+    signing_ts = TextField(column_name='signingts', null=True)
+    timestamp = IntegerField(column_name='timestamp')
+    rating = SmallIntegerField(column_name='rating', null=False)
+
+    class Meta:
+        table_name = 'COMMENTOPINION'
+
+
+class ContentOpinion(Model):
+    id = BigAutoField(column_name='id', primary_key=True)
+    channel = ForeignKeyField(
+        backref='opinions',
+        column_name='channelid',
+        field='claim_id',
+        model=Channel,
+        null=True
+    )
+    claim_id = FixedCharField(max_length=40, column_name='lbryclaimid')
+    signature = FixedCharField(max_length=128, column_name='signature', null=True, unique=True)
+    signing_ts = TextField(column_name='signingts', null=True)
+    timestamp = IntegerField(column_name='timestamp')
+    rating = SmallIntegerField(column_name='rating', null=False, default=0)
+
+    class Meta:
+        table_name = 'CONTENTOPINION'
+
+
 FIELDS = {
     'comment': Comment.comment,
     'comment_id': Comment.comment_id,
@@ -66,17 +110,21 @@ FIELDS = {
 }
 
 
-def comment_list(claim_id: str = None, parent_id: str = None,
-                 top_level: bool = False, exclude_mode: str = None,
-                 page: int = 1, page_size: int = 50, expressions=None,
-                 select_fields: list = None, exclude_fields: list = None) -> dict:
+def comment_list(claim_id: str = None,
+                 parent_id: str = None,
+                 top_level: bool = False,
+                 exclude_mode: str = None,
+                 page: int = 1,
+                 page_size: int = 50, expressions=None,
+                 select_fields: list = None,
+                 exclude_fields: list = None) -> dict:
     fields = FIELDS.keys()
     if exclude_fields:
         fields -= set(exclude_fields)
     if select_fields:
         fields &= set(select_fields)
     attributes = [FIELDS[field] for field in fields]
-    query = Comment.select(*attributes)
+    query = Comment.select(fn.SUM(CommentOpinion.rating).alias('rating'), *attributes)
 
     # todo: allow this process to be more automated, so it can just be an expression
     if claim_id:
@@ -97,6 +145,8 @@ def comment_list(claim_id: str = None, parent_id: str = None,
     total = query.count()
     query = (query
              .join(Channel, JOIN.LEFT_OUTER)
+             .join(CommentOpinion, JOIN.LEFT_OUTER)
+             .group_by(Comment.comment_id)
              .order_by(Comment.timestamp.desc())
              .paginate(page, page_size))
     items = [clean(item) for item in query.dicts()]
@@ -202,6 +252,26 @@ def set_hidden_flag(comment_ids: typing.List[str], hidden=True) -> bool:
               .where(Comment.comment_id.in_(comment_ids)))
     return update.execute() > 0
 
+
+def create_comment_opinion(comment_id: str = None,
+                   channel_id: str = None,
+                   channel_name: str = None,
+                   signature: str = None,
+                   signing_ts: str = None,
+                   rating: int = None) -> dict:
+
+    channel, _ = Channel.get_or_create(name=channel_name, claim_id=channel_id)
+
+    timestamp = int(time.time())
+    new_comment_opinion = CommentOpinion.create(
+            commentid=comment_id,
+            channel=channel,
+            signature=signature,
+            signing_ts=signing_ts,
+            timestamp=timestamp,
+            rating=rating,
+        )
+    return new_comment_opinion
 
 if __name__ == '__main__':
     logger = logging.getLogger('peewee')

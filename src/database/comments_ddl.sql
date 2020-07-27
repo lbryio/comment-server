@@ -48,3 +48,33 @@ ALTER TABLE COMMENT
 
 CREATE INDEX `claim_comment_index` ON `COMMENT` (`lbryclaimid`, `commentid`);
 CREATE INDEX `channel_comment_index` ON `COMMENT` (`channelid`, `commentid`);
+
+CREATE TABLE `COMMENTOPINION` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `commentid` char(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `channelid` char(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `signature` char(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `signingts` varchar(22) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `timestamp` int NOT NULL,
+  `rating` tinyint DEFAULT '1',
+
+  PRIMARY KEY (`id`),
+  KEY `comment_channel_fk` (`channelid`),
+  CONSTRAINT `comment_fk` FOREIGN KEY (`commentid`) REFERENCES `COMMENT` (`commentid`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `comment_channel_fk` FOREIGN KEY (`channelid`) REFERENCES `CHANNEL` (`claimid`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+
+CREATE TABLE `CONTENTOPINION` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `claimid` char(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `channelid` char(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `signature` char(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `signingts` varchar(22) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `timestamp` int NOT NULL,
+  `rating` tinyint DEFAULT '1',
+
+  PRIMARY KEY (`id`),
+  KEY `comment_channel_fk` (`channelid`),
+  KEY `lbryclaimid` (`lbryclaimid`),
+  CONSTRAINT `comment_channel_fk` FOREIGN KEY (`channelid`) REFERENCES `CHANNEL` (`claimid`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

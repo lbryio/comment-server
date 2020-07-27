@@ -10,9 +10,9 @@ from aiohttp import web
 
 from peewee import *
 from src.server.handles import api_endpoint, get_api_endpoint
-from src.database.models import Comment, Channel
+from src.database.models import Comment, Channel, CommentOpinion, ContentOpinion
 
-MODELS = [Comment, Channel]
+MODELS = [Comment, Channel, CommentOpinion, ContentOpinion]
 logger = logging.getLogger(__name__)
 
 

@@ -11,14 +11,13 @@ from src.server.external import send_notification
 from src.server.validation import validate_signature_from_claim
 from src.misc import clean_input_params, get_claim_from_id
 from src.server.errors import make_error, report_error
-from src.database.models import Comment, Channel
+from src.database.models import Comment, Channel, create_comment_opinion
 from src.database.models import get_comment
 from src.database.models import comment_list
 from src.database.models import create_comment
 from src.database.models import edit_comment
 from src.database.models import delete_comment
 from src.database.models import set_hidden_flag
-
 
 logger = logging.getLogger(__name__)
 
@@ -151,10 +150,10 @@ async def handle_hide_comments(app: web.Application, pieces: list, hide: bool = 
                 channel = claims[claim_id]['signing_channel']
                 piece = pieces_by_id[comment_id]
                 is_valid_signature = validate_signature_from_claim(
-                        claim=channel,
-                        signature=piece['signature'],
-                        signing_ts=piece['signing_ts'],
-                        data=piece['comment_id']
+                    claim=channel,
+                    signature=piece['signature'],
+                    signing_ts=piece['signing_ts'],
+                    data=piece['comment_id']
                 )
                 if not is_valid_signature:
                     raise ValueError(f'could not validate signature on comment_id: {comment_id}')
@@ -192,8 +191,8 @@ async def handle_edit_comment(app, comment: str = None, comment_id: str = None,
 
 # TODO: retrieve stake amounts for each channel & store in db
 async def handle_create_comment(app, comment: str = None, claim_id: str = None,
-                          parent_id: str = None, channel_id: str = None, channel_name: str = None,
-                          signature: str = None, signing_ts: str = None) -> dict:
+                                parent_id: str = None, channel_id: str = None, channel_name: str = None,
+                                signature: str = None, signing_ts: str = None) -> dict:
     with app['db'].atomic():
         comment = create_comment(
             comment=comment,
@@ -208,18 +207,37 @@ async def handle_create_comment(app, comment: str = None, claim_id: str = None,
         return comment
 
 
+async def handle_create_comment_opinion(app,
+                                        comment_id: str = None,
+                                        channel_id: str = None,
+                                        channel_name: str = None,
+                                        signature: str = None,
+                                        signing_ts: str = None,
+                                        rating: int = None) -> dict:
+    with app['db'].atomic():
+        return create_comment_opinion(
+            comment_id=comment_id,
+            channel_id=channel_id,
+            channel_name=channel_name,
+            signature=signature,
+            signing_ts=signing_ts,
+            rating=rating,
+        )
+
+
 METHODS = {
     'ping': ping,
-    'get_claim_comments': handle_get_claim_comments,    # this gets used
+    'get_claim_comments': handle_get_claim_comments,  # this gets used
     'get_claim_hidden_comments': handle_get_claim_hidden_comments,  # this gets used
     'get_comment_ids': handle_get_comment_ids,
-    'get_comments_by_id': handle_get_comments_by_id,    # this gets used
+    'get_comments_by_id': handle_get_comments_by_id,  # this gets used
     'get_channel_from_comment_id': handle_get_channel_from_comment_id,  # this gets used
-    'create_comment': handle_create_comment,   # this gets used
+    'create_comment': handle_create_comment,  # this gets used
+    'create_comment_opinion': handle_create_comment_opinion,  # this gets used
     'delete_comment': handle_abandon_comment,
     'abandon_comment': handle_abandon_comment,  # this gets used
     'hide_comments': handle_hide_comments,  # this gets used
-    'edit_comment': handle_edit_comment     # this gets used
+    'edit_comment': handle_edit_comment  # this gets used
 }
 
 
