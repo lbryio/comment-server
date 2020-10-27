@@ -21,7 +21,7 @@ setup(
         'aiohttp',
         'aiojobs',
         'ecdsa>=0.13.3',
-        'cryptography==2.5',
+        'cryptography==3.2',
         'PyNaCl>=1.3.0',
         'requests',
         'cython',
